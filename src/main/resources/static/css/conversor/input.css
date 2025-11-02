@@ -1,0 +1,25 @@
+.menu-bar{
+    /* -fx-border-color: white; */
+    border-style: none;
+}
+
+.layout-principal-cad-cliente{
+    background-color: #f6f8fa;
+}
+
+.bloco-branco {
+    background-color: white;
+    border-color: white;
+    border-width: 2px;
+
+    background-origin: 3px;
+    border-radius: 5px;
+    offset: dropshadow( gaussian, rgba(0, 0, 0, 0.16), 4, 0, 0, 1 );
+}
+
+.filtros-box{
+    background-color: #f5f5f5;
+    border-radius: 10;
+    border-color: #ddd;
+    border-radius: 10;
+}

@@ -1,0 +1,22 @@
+.text-field{
+    -fx-background-radius: 0; 
+    -fx-border-radius: 0;
+
+    /*
+    Implementar campo obrigatorios
+    -fx-border-color: #D0D0D0 red #D0D0D0 #D0D0D0;
+    -fx-border-width: 1px 2px 1px 1px; */
+}
+
+/* 
+Implementar campo obrigatorios
+.text-field:focused {
+    -fx-border-color: #D0D0D0 rgb(0, 38, 255) #D0D0D0 #D0D0D0;
+    -fx-border-width: 1px 2px 1px 1px;
+} */
+
+.combo-box{
+    -fx-background-radius: 0; 
+    -fx-border-radius: 0;
+    -fx-pref-width: 300px
+}
