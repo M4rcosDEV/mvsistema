@@ -6,6 +6,58 @@
     -fx-background-color: #f6f8fa;
 }
 
+/* Define o background e layout do HBox */
+.header-tela-principal {
+    -fx-background-color: -fx-primary-color;
+    -fx-padding: 10px 20px 10px 20px;
+    -fx-min-height: 50px;
+    -fx-alignment: center-left;
+}
+
+.versao-app{
+    -fx-text-fill: -fx-text-light;
+    -fx-font-size: 8px;
+    -fx-font-weight: bold;
+}
+
+.footer-tela-principal {
+    -fx-background-color: -fx-primary-color;
+    -fx-padding: 10px 20px 10px 20px;
+    -fx-height: 5px;
+    -fx-min-height: 5px;
+    -fx-alignment: center-left;
+}
+
+/* Define a cor dos TEXTOS (Labels) DENTRO do header */
+.header-tela-principal .label {
+    -fx-text-fill: -fx-text-light;
+    -fx-font-size: 14px;
+}
+
+.header-tela-principal .label.app-name {
+    -fx-font-weight: bold;
+}
+
+.label-user-autenticado{
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-padding: 0 10 0 0;
+}
+
+.hora-tela-inicial{
+    -fx-font-family: 'Segoe UI';
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+}
+
+.nome-usuario-center-tela-principal{
+    -fx-text-fill: -fx-primary-color;
+    -fx-font-size: 50px;
+    -fx-font-family: "Archive";
+    -fx-translate-x: 30;
+    -fx-translate-y: -20;
+}
+
 .bloco-branco {
     -fx-background-color: white;
     -fx-border-color: white;
@@ -15,9 +67,6 @@
     -fx-background-radius: 3px;
     -fx-border-radius: 5px;
     -fx-effect: dropshadow( gaussian, rgba(0, 0, 0, 0.16), 4, 0, 0, 1 );
-
-    
-
 }
 
 .filtros-box{

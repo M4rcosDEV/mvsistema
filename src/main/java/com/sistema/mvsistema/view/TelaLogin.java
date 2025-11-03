@@ -7,7 +7,6 @@
     import com.sistema.mvsistema.util.CriptografiaUtil;
     import com.sistema.mvsistema.util.Utils;
     import com.sistema.mvsistema.util.Versao;
-    import javafx.application.Platform;
     import javafx.geometry.Insets;
     import javafx.geometry.Pos;
     import javafx.scene.Cursor;
@@ -40,10 +39,10 @@
             ImageView logoImageView = new ImageView();
             try {
 
-                Image logoImage = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/static/imagens/logo_mvsistema.png")));
+                Image logoImage = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/static/imagens/tituloLogin.png")));
 
                 logoImageView.setImage(logoImage);
-                logoImageView.setFitWidth(200);
+                logoImageView.setFitWidth(250);
                 logoImageView.setPreserveRatio(true);
 
             } catch (Exception e) {
@@ -112,21 +111,21 @@
             });
 
             Label versao = new Label("VERSÃO: " + Versao.getVersaoApp());
-            versao.setStyle("-fx-text-fill: white; -fx-font-size: 11px;");
+            versao.setStyle("-fx-text-fill: black; -fx-font-size: 11px; -fx-font-weight: bold;");
             versao.setAlignment(Pos.CENTER);
             versao.setMaxWidth(Double.MAX_VALUE);
 
             // Layout
-            VBox layoutCentro = new VBox(20, logoImageView, title1Text, usuarioBox, senhaBox, btnLogin, versao);
+            VBox layoutCentro = new VBox(15, logoImageView, title1Text, usuarioBox, senhaBox, btnLogin, versao);
             layoutCentro.setAlignment(Pos.CENTER);
             layoutCentro.setPadding(new Insets(30));
 
             BorderPane contentLayout = new BorderPane();
             contentLayout.setCenter(layoutCentro);
-            contentLayout.setBottom(versao);
+
             BorderPane.setMargin(versao, new Insets(10));
 
-            Image backgroundImage = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/static/imagens/backgroudLogin.png")));
+            Image backgroundImage = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/static/imagens/backgroundLogin.png")));
             ImageView backgroundImageView = new ImageView(backgroundImage);
             backgroundImageView.fitWidthProperty().bind(contentLayout.widthProperty());
             backgroundImageView.fitHeightProperty().bind(contentLayout.heightProperty());

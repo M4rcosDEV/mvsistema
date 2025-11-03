@@ -21,6 +21,7 @@ import org.springframework.context.ApplicationListener;
 import com.sistema.mvsistema.MainApplication.StageReadyEvent;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Objects;
 
 @Component
@@ -45,6 +46,7 @@ public class StageInicial implements ApplicationListener<StageReadyEvent> {
 
     @Override
     public void onApplicationEvent(StageReadyEvent event) {
+
         Application.setUserAgentStylesheet(new PrimerLight().getUserAgentStylesheet());
 
         Cliente cliente = new Cliente();
@@ -103,7 +105,8 @@ public class StageInicial implements ApplicationListener<StageReadyEvent> {
     }
 
     private void mostrarTelaLogin() {
-        primaryStage.setTitle("Tela login");
+        primaryStage.setTitle("MVS - Sistema Gerencial");
+        primaryStage.setResizable(false);
         primaryStage.setMaximized(false);
         primaryStage.setScene(loginScene);
         primaryStage.centerOnScreen();
@@ -112,11 +115,12 @@ public class StageInicial implements ApplicationListener<StageReadyEvent> {
 
     private void mostrarTelaPrincipal() {
         Scene mainScene = telaPrincipal.createScene(this::mostrarTelaLogin);
-
-        EstilosGlobal.applyGlobalCss(mainScene);
-        primaryStage.setTitle("Tela principal");
+        estilosGlobal.applyGlobalCss(mainScene);
+        primaryStage.setTitle("MVS - Sistema Gerencial - Tela principal");
         primaryStage.setScene(mainScene);
+        primaryStage.setResizable(true);
         primaryStage.setMaximized(true);
+
         primaryStage.show();
     }
 }

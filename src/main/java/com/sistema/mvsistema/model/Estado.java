@@ -26,4 +26,54 @@ public class Estado {
     @JoinColumn(name = "regiao_id", nullable = false)
     private Regiao regiao;
 
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public Integer getCodigoUf() {
+        return codigoUf;
+    }
+
+    public void setCodigoUf(Integer codigoUf) {
+        this.codigoUf = codigoUf;
+    }
+
+    public String getNome() {
+        return nome;
+    }
+
+    public void setNome(String nome) {
+        this.nome = nome;
+    }
+
+    public String getSigla() {
+        return sigla;
+    }
+
+    public void setSigla(String sigla) {
+        this.sigla = sigla;
+    }
+
+    public Regiao getRegiao() {
+        return regiao;
+    }
+
+    public void setRegiao(Regiao regiao) {
+        this.regiao = regiao;
+    }
+
+    @Override
+    public String toString() {
+        return "Estado{" +
+                "id=" + id +
+                ", codigoUf=" + codigoUf +
+                ", nome='" + nome + '\'' +
+                ", sigla='" + sigla + '\'' +
+                ", regiao=" + regiao +
+                '}';
+    }
 }

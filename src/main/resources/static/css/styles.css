@@ -1,3 +1,20 @@
+:root {
+    /* Baseado no header que vi no seu TelaPrincipal.java */
+    -fx-primary-color: #0d63c3;
+
+    /* Cores de Ação */
+    -fx-accent-color: #ffc107;  /* Um amarelo/laranja para destaque */
+    -fx-danger-color: #dc3545;  /* O vermelho do seu botão 'Sair' */
+
+    /* Cores de Texto */
+    -fx-text-light: #f8f9fa;     /* Um "quase branco" para fundos escuros */
+    -fx-text-dark: #212529;      /* Um "quase preto" para fundos claros */
+
+    /* Neutros */
+    -fx-background-light: #ffffff;
+    -fx-background-dark: #343a40;
+}
+
 .text-field{
     -fx-background-radius: 0; 
     -fx-border-radius: 0;

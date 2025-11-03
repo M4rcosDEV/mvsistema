@@ -46,7 +46,7 @@ public class EstilosGlobal {
      * Ele aplica o CSS global a qualquer cena.
      * * @param scene A cena que deve receber os estilos.
      */
-    public static void applyGlobalCss(Scene scene) {
+    public void applyGlobalCss(Scene scene) {
         String cssPath = getCssPath();
 
         // Verifica se a cena é válida e se o caminho foi encontrado

@@ -1,9 +1,9 @@
-# MV Sistema
+# MVS Sistema
 
-`MV Sistema` é uma aplicação desktop moderna construída com **JavaFX** para a interface gráfica e **Spring Boot** para o gerenciamento do backend, injeção de dependência e persistência de dados.
+`MVS Sistema` é uma aplicação desktop moderna construída com **JavaFX** para a interface gráfica e **Spring Boot** para o gerenciamento do backend, injeção de dependência e persistência de dados.
 
 ---
-<img src="/src/main/resources/static/imagens/logo_mvsistema.png" width=1200/>
+<img src="/src/main/resources/static/imagens/tituloLogin.png" width=1200/>
 
 ---
 ## Tecnologias Principais
@@ -18,7 +18,7 @@
 
 ## Requisitos
 
-- **Java Development Kit (JDK) 25** (ou superior).
+- **Java Development Kit (JDK) 25**.
 - **PostgreSQL**: Uma instância de banco de dados rodando.
 ---
 

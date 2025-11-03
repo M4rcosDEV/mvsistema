@@ -4,13 +4,18 @@ import atlantafx.base.theme.Styles;
 import com.sistema.mvsistema.dto.ClienteBusca;
 import com.sistema.mvsistema.dto.EnderecoDto;
 import com.sistema.mvsistema.model.Cliente;
+import com.sistema.mvsistema.model.Endereco;
+import com.sistema.mvsistema.model.Estado;
 import com.sistema.mvsistema.model.Municipio;
 import com.sistema.mvsistema.repository.ClienteRepository;
+import com.sistema.mvsistema.service.CacheService;
 import com.sistema.mvsistema.service.ClienteService;
 import com.sistema.mvsistema.util.DocumentoUtil;
 import com.sistema.mvsistema.util.Utils;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -19,6 +24,8 @@ import javafx.scene.image.Image;
 import javafx.scene.layout.*;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.util.StringConverter;
+import javafx.collections.transformation.FilteredList;
 import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,11 +34,15 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 @Component
 public class ClienteView {
+
+    private Cliente clienteAtual;
 
     // Identificação
     private TextField campoNomeCliente = new TextField();
@@ -45,6 +56,11 @@ public class ClienteView {
     private ComboBox<String> campoEstadoCivil = new ComboBox<>();
     private ComboBox<String> campoGenero = new ComboBox<>();
     private ComboBox<String> campoTipoPessoa = new ComboBox<>();
+    private TextArea campoObservacoes = new TextArea();
+
+    //Componentes da Aba Endereço
+    private TableView<EnderecoDto> tabelaEnderecos;
+    private ObservableList<EnderecoDto> listaObservavelEnderecos;
 
     // Endereço
     private TextField campoNomeEndereco = new TextField();
@@ -54,8 +70,8 @@ public class ClienteView {
     private TextField campoNumero = new TextField();
     private TextField campoComplemento = new TextField();
     private TextField campoBairro = new TextField();
-    private TextField campoMunicipioEndereco = new TextField();
-    private TextField campoEstado = new TextField();
+    private ComboBox<Municipio> campoMunicipioEndereco = new ComboBox<>();
+    private ComboBox<Estado> campoEstado = new ComboBox<Estado>();
     private TextField campoPais = new TextField();
 
     // ======== CAMPOS DA JANELA DE BUSCA DE CLIENTE ========
@@ -68,11 +84,124 @@ public class ClienteView {
     private ComboBox<String> campoBuscaClassificacao = new ComboBox<>();
     private TextField campoBuscaMunicipio = new TextField();
 
+    private Pane layoutAbaEndereco;
+
     @Autowired
     private ClienteService clienteService;
 
     @Autowired
     private ClienteRepository clienteRepository;
+
+    @Autowired
+    private CacheService cacheService;
+
+    // Por padrão, é uma ação que não faz nada, para evitar NullPointer
+    private Consumer<Cliente> onClienteSelecionadoCallback = (cliente) -> {};
+    /**
+     * Define uma ação a ser executada quando um cliente for
+     * selecionado e carregado na tela.
+     */
+    public void setOnClienteSelecionado(Consumer<Cliente> callback) {
+        // Se o callback for nulo, redefinimos para a ação vazia
+        this.onClienteSelecionadoCallback = (callback != null) ? callback : (c) -> {};
+    }
+
+    private Runnable onCloseCallback = () -> {};
+    public void setOnCloseRequest(Runnable callback) {
+        this.onCloseCallback = (callback != null) ? callback : () -> {};
+    }
+
+    public Pane createCadastroClientePane(BorderPane layout) {
+
+        Button btnNovoCliente = new Button(
+                "Novo cliente", new FontIcon (Feather.PLUS)
+        );
+
+        btnNovoCliente.getStyleClass().add(Styles.ACCENT);
+        btnNovoCliente.setMnemonicParsing(false);
+        btnNovoCliente.setFocusTraversable(false);
+
+        Button btnBuscar = new Button(
+                "Buscar", new FontIcon (Feather.SEARCH)
+        );
+
+        btnBuscar.getStyleClass().add(Styles.ACCENT);
+        btnBuscar.setMnemonicParsing(false);
+        btnBuscar.setFocusTraversable(false);
+        btnBuscar.setOnAction(e -> abrirJanelaBuscarCliente());
+
+        Button btnFechar = new Button(
+                "Fechar", new FontIcon (Feather.X)
+        );
+        btnFechar.getStyleClass().add(Styles.DANGER);
+        btnFechar.setMnemonicParsing(false);
+        btnFechar.setFocusTraversable(false);
+
+        btnFechar.setOnAction(e -> {
+            onCloseCallback.run();
+        });
+
+        HBox botoesAcaoNovoClienteAndBuscaCliente = new HBox();
+        botoesAcaoNovoClienteAndBuscaCliente.getChildren().addAll(btnNovoCliente, btnBuscar, btnFechar);
+        botoesAcaoNovoClienteAndBuscaCliente.setAlignment(Pos.CENTER_LEFT);
+        botoesAcaoNovoClienteAndBuscaCliente.setSpacing(15);
+
+        Label labelCliente = new Label("Cliente");
+        TextField campoCodCliente = new TextField();
+        campoCodCliente.setText("1");
+        campoCodCliente.setEditable(false);
+        campoCodCliente.setPrefWidth(100);
+
+        VBox campoLayoutCodCliente = new VBox(5, labelCliente, campoCodCliente);
+        campoLayoutCodCliente.setFillWidth(false);
+        campoCodCliente.setMaxWidth(100);
+        campoLayoutCodCliente.setAlignment(Pos.CENTER_LEFT);
+
+        // --- AQUI ESTÁ A MÁGICA ---
+        // 2. Registramos o que fazer quando o evento de 'ClienteView' disparar
+        setOnClienteSelecionado(clienteSelecionado -> {
+            // Este código será executado lá de dentro do ClienteView
+            btnNovoCliente.setText("Salvar cliente");
+            btnNovoCliente.setGraphic(new FontIcon(Feather.SAVE));
+            // Podemos até trocar o estilo se quisermos
+            btnNovoCliente.getStyleClass().remove(Styles.SUCCESS);
+            btnNovoCliente.getStyleClass().add(Styles.SUCCESS);
+        });
+
+        TabPane defaultTabs = new TabPane (
+                new Tab ("Informações Gerais", createAbaGeral()),
+                new Tab ("Endereço", createAbaEndereco()),
+                new Tab ("Financeiro") // Nomes mais descritivos
+        );
+
+        defaultTabs.setTabClosingPolicy (TabPane.TabClosingPolicy.UNAVAILABLE);
+
+        defaultTabs.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+
+        VBox containerInformacoes = new VBox(20, campoLayoutCodCliente, defaultTabs);
+        containerInformacoes.setPadding(new Insets(20));
+        containerInformacoes.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+
+        VBox blocoBrancoEstilizado = new VBox();
+        blocoBrancoEstilizado.getStyleClass().add("bloco-branco");
+
+
+        blocoBrancoEstilizado.getChildren().add(containerInformacoes);
+
+        VBox.setVgrow(containerInformacoes, Priority.ALWAYS);
+        containerInformacoes.setMaxWidth(Double.MAX_VALUE);
+
+        // --- 6. LAYOUT PRINCIPAL ---
+        VBox layoutPrincipal = new VBox(15, botoesAcaoNovoClienteAndBuscaCliente, blocoBrancoEstilizado);
+
+        layoutPrincipal.getStyleClass().add("layout-principal-cad-cliente");
+
+        layoutPrincipal.setPadding(new Insets(20));
+
+        //Garante que o bloco branco ocupe o restante da altura do layout principal.
+        VBox.setVgrow(blocoBrancoEstilizado, Priority.ALWAYS);
+        return layoutPrincipal;
+    }
 
     public Pane createAbaGeral() {
 
@@ -137,7 +266,6 @@ public class ClienteView {
 
         // Observações
         Label labelObservacoes = new Label("Observações");
-        TextArea campoObservacoes = new TextArea();
         campoObservacoes.setPromptText("Informações adicionais, notas, etc.");
         campoObservacoes.setPrefRowCount(3);
         campoObservacoes.setDisable(true);
@@ -241,12 +369,15 @@ public class ClienteView {
     }
 
     public Pane createAbaEndereco() {
+        listaObservavelEnderecos = FXCollections.observableArrayList();
+
         Button btnNovoEndereco = new Button(
                 "Novo endereço", new FontIcon (Feather.PLUS)
         );
         btnNovoEndereco.getStyleClass().add(Styles.ACCENT);
         btnNovoEndereco.setMnemonicParsing(false);
         btnNovoEndereco.setFocusTraversable(false);
+        btnNovoEndereco.setDisable(true);
 
         Button btnSalvar = new Button(
                 "Salvar", new FontIcon (Feather.SAVE)
@@ -305,7 +436,117 @@ public class ClienteView {
 
         Label labelEstado = new Label("Estado");
         campoEstado.setPromptText("UF (Ex: SP, BA)");
-        campoEstado.setDisable(true);
+        campoEstado.setDisable(false);
+        campoMunicipioEndereco.setDisable(false);
+
+        ObservableList<Estado> masterListEstados = FXCollections.observableArrayList(cacheService.getEstadosCache());
+
+        campoEstado.setConverter(new StringConverter<Estado>() {
+            @Override
+            public String toString(Estado estado) {
+                return (estado == null) ? null : estado.getNome();
+            }
+
+            @Override
+            public Estado fromString(String string) {
+                // Encontra o objeto pelo nome digitado
+                return masterListEstados.stream()
+                        .filter(e -> e.getNome().startsWith(string))
+                        .findFirst()
+                        .orElse(null);
+            }
+        });
+
+        // 3. A LÓGICA DO FILTRO
+        FilteredList<Estado> filteredListEstados = new FilteredList<>(masterListEstados, p -> true);
+
+        campoEstado.setItems(filteredListEstados);
+        campoEstado.setEditable(true);
+
+        // 4. LISTENER DE DIGITAÇÃO
+        campoEstado.getEditor().textProperty().addListener((obs, oldValue, newValue) -> {
+
+            final Estado selectedEstado = campoEstado.getSelectionModel().getSelectedItem();
+
+            // Evita re-filtrar se a mudança foi por seleção
+            if (selectedEstado != null && newValue.equals(selectedEstado.getNome())) {
+                return;
+            }
+
+            // Define a regra de filtro
+            filteredListEstados.setPredicate(estado -> {
+                if (newValue == null || newValue.isEmpty()) {
+                    return true;
+                }
+                String lowerCaseFilter = newValue.toLowerCase();
+
+                // AQUI USAMOS O GETTER:
+                if (estado.getNome().toLowerCase().contains(lowerCaseFilter)) {
+                    return true;
+                }
+                return false;
+            });
+
+            campoEstado.show();
+        });
+
+        ObservableList<Municipio> masterListaMunicipio = FXCollections.observableArrayList(cacheService.getMunicipiosCache());
+
+        campoMunicipioEndereco.setConverter(new StringConverter<Municipio>() {
+            @Override
+            public String toString(Municipio municipio) {
+                return municipio == null ? null:  municipio.getNome();
+            }
+
+            @Override
+            public Municipio fromString(String s) {
+                return masterListaMunicipio
+                        .stream()
+                        .filter(municipio -> municipio.getNome().equalsIgnoreCase(s))
+                        .findFirst()
+                        .orElse(null);
+            }
+        });
+
+        FilteredList<Municipio> filteredListMunicipio = new FilteredList<>(masterListaMunicipio, p -> true);
+        campoMunicipioEndereco.setItems(filteredListMunicipio);
+        campoMunicipioEndereco.setEditable(true);
+        campoMunicipioEndereco.getEditor().textProperty().addListener((obs, oldValue, newValue) -> {
+            final Municipio selectedMunicipio = campoMunicipioEndereco.getSelectionModel().getSelectedItem();
+
+            if(selectedMunicipio != null && newValue.equals(selectedMunicipio.getNome())){
+                return;
+            }
+
+            filteredListMunicipio.setPredicate(municipio -> {
+                if(newValue == null || newValue.isEmpty()){
+                    return true;
+                }
+
+                String nomeMunicipioMinusculo = newValue.toLowerCase();
+
+                if(municipio.getNome().toLowerCase().contains(nomeMunicipioMinusculo)){
+                    return true;
+                }
+
+                return false;
+            });
+            campoMunicipioEndereco.show();
+        });
+
+        campoEstado.focusedProperty().addListener((obs, oldVal, ganhouFoco) -> {
+            if (ganhouFoco) {
+                filteredListEstados.setPredicate(p -> true);
+                campoEstado.show();
+            }
+        });
+
+        campoMunicipioEndereco.focusedProperty().addListener((obs, oldVal, ganhouFoco) -> {
+            if (ganhouFoco) {
+                filteredListMunicipio.setPredicate(p -> true);
+                campoMunicipioEndereco.show();
+            }
+        });
 
         Label labelPais = new Label("País");
         campoPais.setPromptText("País");
@@ -392,35 +633,37 @@ public class ClienteView {
         //nome, tipo_endereco, cep, municipio
         // ======== TABELA DE ENDEREÇOS ========
 
-        var colNome = new TableColumn<EnderecoDto, String>("Nome");
+        TableColumn<EnderecoDto, String> colNome = new TableColumn<EnderecoDto, String>("Nome");
         colNome.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getNome()));
 
-        var colTipoEndereco = new TableColumn<EnderecoDto, String>("Tipo endereço");
+        TableColumn<EnderecoDto, String> colTipoEndereco = new TableColumn<EnderecoDto, String>("Tipo endereço");
         colTipoEndereco.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getTipoEndereco()));
 
-        var colCep = new TableColumn<EnderecoDto, String>("Cep");
+        TableColumn<EnderecoDto, String> colCep = new TableColumn<EnderecoDto, String>("Cep");
         colCep.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getCep()));
 
-        var colMunicipio = new TableColumn<EnderecoDto, String>("Municipio");
+        TableColumn<EnderecoDto, String> colMunicipio = new TableColumn<EnderecoDto, String>("Municipio");
         colMunicipio.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getMunicipio()));
-
-        var tabela = new TableView<EnderecoDto>();
-        tabela.getColumns().setAll(colNome, colTipoEndereco, colCep, colMunicipio);
-        tabela.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
-        tabela.setPrefHeight(350);
+        tabelaEnderecos = new TableView<EnderecoDto>();
+        tabelaEnderecos.getColumns().setAll(List.of(colNome, colTipoEndereco, colCep, colMunicipio));
+        tabelaEnderecos.setItems(listaObservavelEnderecos);
+        tabelaEnderecos.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
+        tabelaEnderecos.setPrefHeight(350);
 
         // --- 3. LAYOUT PRINCIPAL ---
-        VBox layoutEndereco = new VBox(20,botoesAcaoNovoEnderecoAndEditarEndereco, gridEndereco, tabela); // 20 de espaçamento
+        VBox layoutEndereco = new VBox(20,botoesAcaoNovoEnderecoAndEditarEndereco, gridEndereco, tabelaEnderecos); // 20 de espaçamento
         layoutEndereco.setPadding(new Insets(20)); // 20 de padding
 
         // Para o caso de esta aba precisar crescer (como a de observações)
         VBox.setVgrow(gridEndereco, Priority.ALWAYS);
 
+        this.layoutAbaEndereco = layoutEndereco;
         return layoutEndereco;
     }
 
     public void abrirJanelaBuscarCliente() {
         Stage janelaBuscarClienteStage  = new Stage();
+        //janelaBuscarClienteStage.setResizable(false);
         janelaBuscarClienteStage.getIcons().add(new Image(Objects.requireNonNull(ClienteView.class.getResourceAsStream("/static/imagens/logo.png"))));
         janelaBuscarClienteStage.setTitle("Buscar Cliente");
         janelaBuscarClienteStage.initModality(Modality.APPLICATION_MODAL);
@@ -584,16 +827,18 @@ public class ClienteView {
         layout.setAlignment(Pos.TOP_CENTER);
         layout.setStyle("-fx-background-color: #ffffff;");
 
+        //Chamei a função só pra garantir que todos os campos fiquem limpos no inicio
+        limparEBloquearFormulario();
+
         //EVENTOS
         btnSelecionar.setOnAction(e -> {
             ClienteBusca clienteSelecionado = tabela.getSelectionModel().getSelectedItem();
-
             Optional<Cliente> clienteOptional = clienteRepository.findById(clienteSelecionado.getId());
 
             if (clienteOptional.isPresent()) {
                 janelaBuscarClienteStage.close();
 
-                Cliente cliente = clienteOptional.get();
+                clienteAtual = clienteOptional.get();
 
                 campoNomeCliente.setDisable(false);
                 campoNomeFantasiaAndApelido.setDisable(false);
@@ -606,23 +851,144 @@ public class ClienteView {
                 campoEstadoCivil.setDisable(false);
                 campoGenero.setDisable(false);
                 campoTipoPessoa.setDisable(false);
+                campoObservacoes.setDisable(false);
 
-                campoNomeCliente.setText(cliente.getNome());
-                campoNomeFantasiaAndApelido.setText(cliente.getSobrenome());
-                campoTelefone.setText(cliente.getTelefone());
-                campoEmail.setText(cliente.getEmail());
-                campoCPF.setText(cliente.getCpfCnpj());
-                campoCNPJ.setText(cliente.getCpfCnpj());
-                campoRG.setText(cliente.getRegistro());
-                campoDataNascimento.setValue(cliente.getDataNascimento());
-                campoEstadoCivil.setValue(cliente.getEstadoCivil());
-                campoGenero.setValue(cliente.getGenero());
-                campoTipoPessoa.setValue(Utils.converterTipoPessoaCharParaString(cliente.getTipoPessoa()));
+                campoNomeCliente.setText(clienteAtual.getNome());
+                campoNomeFantasiaAndApelido.setText(clienteAtual.getSobrenome());
+                campoTelefone.setText(clienteAtual.getTelefone());
+                campoEmail.setText(clienteAtual.getEmail());
+                campoCPF.setText(clienteAtual.getCpfCnpj());
+                campoCNPJ.setText(clienteAtual.getCpfCnpj());
+                campoRG.setText(clienteAtual.getRegistro());
+                campoDataNascimento.setValue(clienteAtual.getDataNascimento());
+                campoEstadoCivil.setValue(clienteAtual.getEstadoCivil());
+                campoGenero.setValue(clienteAtual.getGenero());
+                campoTipoPessoa.setValue(Utils.converterTipoPessoaCharParaString(clienteAtual.getTipoPessoa()));
+
+                onClienteSelecionadoCallback.accept(clienteAtual);
             }
         });
 
         Scene cena = new Scene(layout, 900, 730);
         janelaBuscarClienteStage.setScene(cena);
         janelaBuscarClienteStage.showAndWait();
+    }
+
+    private Cliente getClienteFormulario(){
+        if(clienteAtual == null){
+            clienteAtual = new Cliente();
+        }
+
+        clienteAtual.setNome(campoNomeCliente.getText());
+        clienteAtual.setSobrenome(campoNomeFantasiaAndApelido.getText());
+        clienteAtual.setTelefone(campoTelefone.getText());
+        clienteAtual.setEmail(campoEmail.getText());
+
+        String tipoPessoa = campoTipoPessoa.getValue();
+        if ("Jurídico".equals(tipoPessoa) || "Instituição".equals(tipoPessoa)) {
+            clienteAtual.setCpfCnpj(campoCNPJ.getText());
+        } else if ("Física".equals(tipoPessoa) || "Produtor".equals(tipoPessoa)) {
+            clienteAtual.setCpfCnpj(campoCPF.getText());
+        } else {
+            clienteAtual.setCpfCnpj(null);
+        }
+
+        clienteAtual.setRegistro(campoRG.getText());
+        clienteAtual.setDataNascimento(campoDataNascimento.getValue());
+        clienteAtual.setEstadoCivil(campoEstadoCivil.getValue());
+        clienteAtual.setGenero(campoGenero.getValue());
+        clienteAtual.setTipoPessoa(Utils.converterTipoPessoaStringParaChar(campoTipoPessoa.getValue()));
+
+        return clienteAtual;
+    }
+
+    public void limparEBloquearFormulario() {
+        clienteAtual = null; // Limpa o cliente em memória
+
+        campoNomeCliente.setText("");
+        campoNomeFantasiaAndApelido.setText("");
+        campoTelefone.setText("");
+        campoEmail.setText("");
+        campoCPF.setText("");
+        campoCNPJ.setText("");
+        campoRG.setText("");
+        campoDataNascimento.setValue(null);
+        campoEstadoCivil.setValue(null);
+        campoTipoPessoa.setValue(null);
+        campoGenero.setValue(null);
+        campoObservacoes.setText("");
+
+        campoNomeCliente.setDisable(true);
+        campoNomeFantasiaAndApelido.setDisable(true);
+        campoTelefone.setDisable(true);
+        campoEmail.setDisable(true);
+        campoCPF.setDisable(true);
+        campoCNPJ.setDisable(true);
+        campoRG.setDisable(true);
+        campoDataNascimento.setDisable(true);
+        campoEstadoCivil.setDisable(true);
+        campoGenero.setDisable(true);
+        campoTipoPessoa.setDisable(true);
+        campoObservacoes.setDisable(true);
+    }
+
+    private void preencherFormEndereco(Endereco endereco) {
+        campoNomeEndereco.setText(endereco.getNome());
+        campoTipoPessoa.setValue(endereco.getTipoEndereco());
+        campoCEP.setText(endereco.getCep());
+        campoRua.setText(endereco.getRua());
+        campoNumero.setText(endereco.getNumero());
+        campoComplemento.setText(endereco.getComplemento());
+        campoBairro.setText(endereco.getBairro());
+        campoMunicipioEndereco.setValue(endereco.getMunicipio());
+        campoPais.setText(endereco.getPais());
+
+        String estadoSigla = endereco.getEstado();
+
+        Optional<Estado> estadoParaSelecionar = cacheService.getEstadosCache()
+                .stream()
+                .filter(estado -> estado.getSigla().equalsIgnoreCase(estadoSigla))
+                .findFirst();
+
+        if(estadoParaSelecionar.isPresent()){
+            campoEstado.setValue(estadoParaSelecionar.get());
+        }else {
+            campoEstado.getSelectionModel().clearSelection();
+        }
+    }
+
+    private void limparFormEndereco() {
+        tabelaEnderecos.getSelectionModel().clearSelection();
+        campoNomeEndereco.setText("");
+        campoTipoPessoa.setValue(null);
+        campoCEP.setText("");
+        campoRua.setText("");
+        campoNumero.setText("");
+        campoComplemento.setText("");
+        campoBairro.setText("");
+        campoMunicipioEndereco.setValue(null);
+        campoPais.setText("");
+        campoEstado.setValue(null);
+    }
+    //Metodo para novo cliente
+    public void prepararNovoCliente() {
+        limparEBloquearFormulario();
+        clienteAtual = new Cliente();
+
+        // Habilita os campos
+        campoNomeCliente.setDisable(false);
+        campoNomeFantasiaAndApelido.setDisable(false);
+        campoTelefone.setDisable(false);
+        campoEmail.setDisable(false);
+        campoCPF.setDisable(false);
+        campoCNPJ.setDisable(false);
+        campoRG.setDisable(false);
+        campoDataNascimento.setDisable(false);
+        campoEstadoCivil.setDisable(false);
+        campoGenero.setDisable(false);
+        campoTipoPessoa.setDisable(false);
+        campoObservacoes.setDisable(false);
+
+        campoNomeCliente.requestFocus();
     }
 }
