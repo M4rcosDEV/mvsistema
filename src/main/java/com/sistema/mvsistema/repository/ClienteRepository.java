@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface  ClienteRepository extends JpaRepository<Cliente, Long> {
@@ -34,4 +35,7 @@ public interface  ClienteRepository extends JpaRepository<Cliente, Long> {
     );
 
     List<ClienteBusca> findByNomeStartsWith(String nome);
+
+    @Query("SELECT c FROM Cliente c LEFT JOIN FETCH c.enderecos e LEFT JOIN FETCH e.municipio WHERE c.id = :id")
+    Optional<Cliente> findByIdWithEnderecos(@Param("id") Long id);
 }

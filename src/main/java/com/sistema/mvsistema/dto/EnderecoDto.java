@@ -3,13 +3,13 @@ package com.sistema.mvsistema.dto;
 import com.sistema.mvsistema.model.Municipio;
 
 public class EnderecoDto {
-    private final Long id;
+    private final Integer id;
     private final String nome;
     private final String tipoEndereco;
     private final String cep;
     private final String municipio;
 
-    public EnderecoDto(Long id, String nome, String tipoEndereco, String cep, Municipio municipio) {
+    public EnderecoDto(Integer id, String nome, String tipoEndereco, String cep, Municipio municipio) {
         this.id = id;
         this.nome = nome;
         this.tipoEndereco = tipoEndereco;
@@ -33,7 +33,7 @@ public class EnderecoDto {
         return nome;
     }
 
-    public Long getId() {
+    public Integer getId() {
         return id;
     }
 }

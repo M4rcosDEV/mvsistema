@@ -37,3 +37,94 @@ Implementar campo obrigatorios
     -fx-border-radius: 0;
     -fx-pref-width: 300px
 }
+
+.auto-complete-textfield {
+    -fx-background-color: white;
+    -fx-border-color: #cccccc;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-padding: 8px 12px;
+    -fx-font-size: 14px;
+    -fx-pref-height: 40px;
+}
+
+.auto-complete-textfield:focused {
+    -fx-border-color: #0078d4;
+    -fx-border-width: 2px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 120, 212, 0.2), 10, 0, 0, 0);
+}
+
+/* Container com setinha (precisa envolver o TextField) */
+.auto-complete-container {
+    -fx-background-color: transparent;
+}
+
+.auto-complete-container .arrow-button {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 8px;
+}
+
+.auto-complete-container .arrow {
+    -fx-shape: "M 0 0 L 5 5 L 10 0 Z";
+    -fx-background-color: #666666;
+}
+
+.auto-complete-container:hover .arrow {
+    -fx-background-color: #0078d4;
+}
+
+/* Estilo da ListView (popup) */
+.auto-complete-listview {
+    -fx-background-color: white;
+    -fx-border-color: #e1e1e1;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 10, 0, 0, 2);
+    -fx-padding: 4px;
+}
+
+.auto-complete-listview .list-cell {
+    -fx-background-color: transparent;
+    -fx-padding: 10px 12px;
+    -fx-border-color: transparent;
+    -fx-text-fill: #333333;
+    -fx-font-size: 14px;
+}
+
+.auto-complete-listview .list-cell:hover {
+    -fx-background-color: #0078d4;
+    -fx-text-fill: white;
+    -fx-cursor: hand;
+}
+
+.auto-complete-listview .list-cell:filled:selected {
+    -fx-background-color: #0078d4;
+    -fx-text-fill: white;
+}
+
+.auto-complete-listview .list-cell:empty {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+/* ScrollBar da ListView */
+.auto-complete-listview .scroll-bar:vertical {
+    -fx-background-color: transparent;
+    -fx-pref-width: 8px;
+}
+
+.auto-complete-listview .scroll-bar:vertical .track {
+    -fx-background-color: #f0f0f0;
+    -fx-border-color: transparent;
+    -fx-background-radius: 4px;
+}
+
+.auto-complete-listview .scroll-bar:vertical .thumb {
+    -fx-background-color: #c1c1c1;
+    -fx-background-radius: 4px;
+}
+
+.auto-complete-listview .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #a8a8a8;
+}

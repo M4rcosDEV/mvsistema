@@ -1,0 +1,36 @@
+.filter-combo-box {
+  -fx-background-color: white;
+  -fx-border-color: #ccc;
+  -fx-border-radius: 8;
+  -fx-background-radius: 8;
+  -fx-padding: 6 10;
+  -fx-font-size: 14px;
+}
+
+.filter-combo-box:popup {
+  -fx-border-radius: 5;
+  -fx-background-radius: 5;
+}
+
+.filter-combo-box .search-container {
+  -fx-background-color: white;
+  -fx-background-radius: 5;
+  -fx-border-color: #ebebeb;
+  -fx-border-radius: 5;
+  -fx-padding: 10 5 5 5;
+  -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 6, 0, 0, 2);
+}
+
+.filter-combo-box .search-field {
+  -fx-background-color: white;
+  -fx-border-color: lightgray;
+  -fx-border-radius: 5;
+  -fx-background-radius: 5;
+  -fx-padding: 5;
+}
+
+.filter-combo-box .list-view {
+  -fx-background-color: transparent;
+  -fx-background-radius: 0;
+  -fx-max-height: 200;
+}

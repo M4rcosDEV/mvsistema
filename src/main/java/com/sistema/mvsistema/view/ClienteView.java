@@ -1,6 +1,9 @@
 package com.sistema.mvsistema.view;
 
+import atlantafx.base.controls.CustomTextField;
+import atlantafx.base.controls.Notification;
 import atlantafx.base.theme.Styles;
+import atlantafx.base.util.Animations;
 import com.sistema.mvsistema.dto.ClienteBusca;
 import com.sistema.mvsistema.dto.EnderecoDto;
 import com.sistema.mvsistema.model.Cliente;
@@ -10,8 +13,10 @@ import com.sistema.mvsistema.model.Municipio;
 import com.sistema.mvsistema.repository.ClienteRepository;
 import com.sistema.mvsistema.service.CacheService;
 import com.sistema.mvsistema.service.ClienteService;
+import com.sistema.mvsistema.util.AutoCompleteTextField;
 import com.sistema.mvsistema.util.DocumentoUtil;
 import com.sistema.mvsistema.util.Utils;
+import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -24,25 +29,32 @@ import javafx.scene.image.Image;
 import javafx.scene.layout.*;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-import javafx.util.StringConverter;
-import javafx.collections.transformation.FilteredList;
+import javafx.util.Duration;
 import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
+import org.kordamp.ikonli.material2.Material2AL;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
+
+import static com.sistema.mvsistema.util.NotificationUtil.exibirErro;
 
 @Component
 public class ClienteView {
 
     private Cliente clienteAtual;
+
+    //Botoes
+    private Button btnNovoCliente;
+    private Button btnNovoEndereco = new Button();
+    private Button btnSalvarEndereco = new Button();
+
 
     // Identificação
     private TextField campoNomeCliente = new TextField();
@@ -59,8 +71,8 @@ public class ClienteView {
     private TextArea campoObservacoes = new TextArea();
 
     //Componentes da Aba Endereço
-    private TableView<EnderecoDto> tabelaEnderecos;
-    private ObservableList<EnderecoDto> listaObservavelEnderecos;
+    private TableView<Endereco> tabelaEnderecos;
+    private ObservableList<Endereco> listaObservavelEnderecos;
 
     // Endereço
     private TextField campoNomeEndereco = new TextField();
@@ -70,8 +82,8 @@ public class ClienteView {
     private TextField campoNumero = new TextField();
     private TextField campoComplemento = new TextField();
     private TextField campoBairro = new TextField();
-    private ComboBox<Municipio> campoMunicipioEndereco = new ComboBox<>();
-    private ComboBox<Estado> campoEstado = new ComboBox<Estado>();
+    private CustomTextField campoMunicipioEndereco = new CustomTextField();
+    private CustomTextField campoEstado = new CustomTextField();
     private TextField campoPais = new TextField();
 
     // ======== CAMPOS DA JANELA DE BUSCA DE CLIENTE ========
@@ -83,6 +95,10 @@ public class ClienteView {
     private TextField campoBuscaTelefone = new TextField();
     private ComboBox<String> campoBuscaClassificacao = new ComboBox<>();
     private TextField campoBuscaMunicipio = new TextField();
+
+    private AutoCompleteTextField<Municipio> autoCompleteListaMunicipios;
+
+    private AutoCompleteTextField<Estado> autoCompleteListaEstados;
 
     private Pane layoutAbaEndereco;
 
@@ -113,7 +129,7 @@ public class ClienteView {
 
     public Pane createCadastroClientePane(BorderPane layout) {
 
-        Button btnNovoCliente = new Button(
+        btnNovoCliente = new Button(
                 "Novo cliente", new FontIcon (Feather.PLUS)
         );
 
@@ -157,21 +173,10 @@ public class ClienteView {
         campoCodCliente.setMaxWidth(100);
         campoLayoutCodCliente.setAlignment(Pos.CENTER_LEFT);
 
-        // --- AQUI ESTÁ A MÁGICA ---
-        // 2. Registramos o que fazer quando o evento de 'ClienteView' disparar
-        setOnClienteSelecionado(clienteSelecionado -> {
-            // Este código será executado lá de dentro do ClienteView
-            btnNovoCliente.setText("Salvar cliente");
-            btnNovoCliente.setGraphic(new FontIcon(Feather.SAVE));
-            // Podemos até trocar o estilo se quisermos
-            btnNovoCliente.getStyleClass().remove(Styles.SUCCESS);
-            btnNovoCliente.getStyleClass().add(Styles.SUCCESS);
-        });
-
         TabPane defaultTabs = new TabPane (
                 new Tab ("Informações Gerais", createAbaGeral()),
                 new Tab ("Endereço", createAbaEndereco()),
-                new Tab ("Financeiro") // Nomes mais descritivos
+                new Tab ("Financeiro")
         );
 
         defaultTabs.setTabClosingPolicy (TabPane.TabClosingPolicy.UNAVAILABLE);
@@ -190,6 +195,57 @@ public class ClienteView {
 
         VBox.setVgrow(containerInformacoes, Priority.ALWAYS);
         containerInformacoes.setMaxWidth(Double.MAX_VALUE);
+
+        //EVENTOS
+        btnNovoCliente.setOnAction(e -> {
+            System.out.println("Executou");
+
+            // ESTADO 2: O usuário está clicando em "SALVAR"
+            if (btnNovoCliente.getText().equals("Salvar cliente")) {
+                System.out.println("Verificando validações...");
+                if (verificarCamposObrigatorios()) { // Removi o endereço por enquanto
+                    System.out.println("Entrou no IF (Salvando)");
+
+                    // Sucesso na validação
+                    // limparEBloquearFormulario();
+                    // limparFormEndereco();
+                    if(btnNovoEndereco.isDisable()){
+                        System.out.println("Endereço em edicao");
+                        exibirErro(btnSalvarEndereco, "Endereço em edição, por favor finalize o cadastro do endereço");
+                    }else{
+                        Cliente clienteNovo =  getClienteFormulario();
+                        System.out.println("Cliente INFO" + clienteNovo.toString());
+                        clienteRepository.save(clienteNovo); // Você precisa montar o clienteAtual aqui
+
+
+                        // Reseta o botão para o estado inicial
+                        btnNovoCliente.setText("Novo cliente");
+                        btnNovoCliente.setGraphic(new FontIcon(Feather.PLUS));
+                        btnNovoCliente.getStyleClass().remove(Styles.SUCCESS);
+                    }
+
+
+                    // TODO: Exibir notificação de SUCESSO
+                } else {
+                    System.out.println("Validação falhou.");
+                    // Não faz nada, o método exibirErro() dentro da validação já mostrou o toast.
+                }
+
+            } else {
+                btnNovoEndereco.setDisable(false);
+
+                // ESTADO 1: O usuário está clicando em "NOVO CLIENTE"
+                System.out.println("Entrou no ELSE (Preparando para novo)");
+
+                // Define o texto para o PRÓXIMO estado
+                btnNovoCliente.setText("Salvar cliente");
+                btnNovoCliente.setGraphic(new FontIcon(Feather.CHECK));
+                btnNovoCliente.getStyleClass().add(Styles.SUCCESS);
+
+                // Apenas prepara o formulário para um novo cliente
+                 prepararNovoCliente(); // Descomente seus métodos de preparação
+            }
+        });
 
         // --- 6. LAYOUT PRINCIPAL ---
         VBox layoutPrincipal = new VBox(15, botoesAcaoNovoClienteAndBuscaCliente, blocoBrancoEstilizado);
@@ -371,25 +427,25 @@ public class ClienteView {
     public Pane createAbaEndereco() {
         listaObservavelEnderecos = FXCollections.observableArrayList();
 
-        Button btnNovoEndereco = new Button(
-                "Novo endereço", new FontIcon (Feather.PLUS)
-        );
+//        btnNovoEndereco = new Button(
+//                "Novo endereço", new FontIcon (Feather.PLUS)
+//        );
+        btnNovoEndereco.setText("Novo endereço");
+        btnNovoEndereco.setGraphic(new FontIcon(Feather.PLUS));
         btnNovoEndereco.getStyleClass().add(Styles.ACCENT);
         btnNovoEndereco.setMnemonicParsing(false);
         btnNovoEndereco.setFocusTraversable(false);
         btnNovoEndereco.setDisable(true);
 
-        Button btnSalvar = new Button(
-                "Salvar", new FontIcon (Feather.SAVE)
-        );
-
-        btnSalvar.getStyleClass().add(Styles.ACCENT);
-        btnSalvar.setMnemonicParsing(false);
-        btnSalvar.setFocusTraversable(false);
-        btnSalvar.setDisable(true);
+        btnSalvarEndereco.setText("Salvar");
+        btnSalvarEndereco.setGraphic(new FontIcon(Feather.SAVE));
+        btnSalvarEndereco.getStyleClass().add(Styles.ACCENT);
+        btnSalvarEndereco.setMnemonicParsing(false);
+        btnSalvarEndereco.setFocusTraversable(false);
+        btnSalvarEndereco.setDisable(true);
 
         HBox botoesAcaoNovoEnderecoAndEditarEndereco = new HBox();
-        botoesAcaoNovoEnderecoAndEditarEndereco.getChildren().addAll(btnNovoEndereco, btnSalvar);
+        botoesAcaoNovoEnderecoAndEditarEndereco.getChildren().addAll(btnNovoEndereco, btnSalvarEndereco);
         botoesAcaoNovoEnderecoAndEditarEndereco.setAlignment(Pos.CENTER_LEFT);
         botoesAcaoNovoEnderecoAndEditarEndereco.setSpacing(15);
 
@@ -432,120 +488,50 @@ public class ClienteView {
 
         Label labelMunicipio = new Label("Municipio");
         campoMunicipioEndereco.setPromptText("Municipio");
-        campoMunicipioEndereco.setDisable(true);
+
 
         Label labelEstado = new Label("Estado");
+
+        ObservableList<Estado> listaEstados = FXCollections.observableArrayList(cacheService.getEstadosCache());
+        autoCompleteListaEstados = new AutoCompleteTextField<>(
+                listaEstados,
+                estado -> estado.getSigla() + " - " + estado.getNome()
+        );
+
+        campoEstado = autoCompleteListaEstados.getTextField();
+        campoEstado.setDisable(true);
+        ObservableList<Municipio> listaMunicipios = FXCollections.observableArrayList(cacheService.getMunicipiosCache());
+
+        autoCompleteListaMunicipios = new AutoCompleteTextField<>(
+                listaMunicipios,
+                municipio -> municipio.getNome() + " - " + municipio.getUf()
+        );
+
+        campoMunicipioEndereco = autoCompleteListaMunicipios.getTextField();
+        campoMunicipioEndereco.setDisable(true);
+
+        campoMunicipioEndereco.setRight(new FontIcon(Feather.CHEVRON_DOWN));
+        campoEstado.setRight(new FontIcon(Feather.CHEVRON_DOWN));
         campoEstado.setPromptText("UF (Ex: SP, BA)");
-        campoEstado.setDisable(false);
-        campoMunicipioEndereco.setDisable(false);
+        campoMunicipioEndereco.setPromptText("Escolha ou pesquise...");
 
-        ObservableList<Estado> masterListEstados = FXCollections.observableArrayList(cacheService.getEstadosCache());
+        autoCompleteListaMunicipios.getTextField().textProperty().addListener((obs, oldText, newText) -> {
+            Municipio municipioSelecionado = autoCompleteListaMunicipios.getSelectedItem();
 
-        campoEstado.setConverter(new StringConverter<Estado>() {
-            @Override
-            public String toString(Estado estado) {
-                return (estado == null) ? null : estado.getNome();
-            }
+            if (municipioSelecionado != null) {
+                // Verifica se o município selecionado existe no cache
+                boolean existeNoCache = cacheService.getMunicipiosCache().stream()
+                        .anyMatch(m -> m.getNome().equalsIgnoreCase(municipioSelecionado.getNome()));
 
-            @Override
-            public Estado fromString(String string) {
-                // Encontra o objeto pelo nome digitado
-                return masterListEstados.stream()
-                        .filter(e -> e.getNome().startsWith(string))
-                        .findFirst()
-                        .orElse(null);
-            }
-        });
-
-        // 3. A LÓGICA DO FILTRO
-        FilteredList<Estado> filteredListEstados = new FilteredList<>(masterListEstados, p -> true);
-
-        campoEstado.setItems(filteredListEstados);
-        campoEstado.setEditable(true);
-
-        // 4. LISTENER DE DIGITAÇÃO
-        campoEstado.getEditor().textProperty().addListener((obs, oldValue, newValue) -> {
-
-            final Estado selectedEstado = campoEstado.getSelectionModel().getSelectedItem();
-
-            // Evita re-filtrar se a mudança foi por seleção
-            if (selectedEstado != null && newValue.equals(selectedEstado.getNome())) {
-                return;
-            }
-
-            // Define a regra de filtro
-            filteredListEstados.setPredicate(estado -> {
-                if (newValue == null || newValue.isEmpty()) {
-                    return true;
+                if (existeNoCache) {
+                    // Se existe no cache, seta silenciosamente o estado
+                    autoCompleteListaEstados.setTextSilently(municipioSelecionado.getUf());
                 }
-                String lowerCaseFilter = newValue.toLowerCase();
-
-                // AQUI USAMOS O GETTER:
-                if (estado.getNome().toLowerCase().contains(lowerCaseFilter)) {
-                    return true;
-                }
-                return false;
-            });
-
-            campoEstado.show();
-        });
-
-        ObservableList<Municipio> masterListaMunicipio = FXCollections.observableArrayList(cacheService.getMunicipiosCache());
-
-        campoMunicipioEndereco.setConverter(new StringConverter<Municipio>() {
-            @Override
-            public String toString(Municipio municipio) {
-                return municipio == null ? null:  municipio.getNome();
-            }
-
-            @Override
-            public Municipio fromString(String s) {
-                return masterListaMunicipio
-                        .stream()
-                        .filter(municipio -> municipio.getNome().equalsIgnoreCase(s))
-                        .findFirst()
-                        .orElse(null);
             }
         });
 
-        FilteredList<Municipio> filteredListMunicipio = new FilteredList<>(masterListaMunicipio, p -> true);
-        campoMunicipioEndereco.setItems(filteredListMunicipio);
-        campoMunicipioEndereco.setEditable(true);
-        campoMunicipioEndereco.getEditor().textProperty().addListener((obs, oldValue, newValue) -> {
-            final Municipio selectedMunicipio = campoMunicipioEndereco.getSelectionModel().getSelectedItem();
-
-            if(selectedMunicipio != null && newValue.equals(selectedMunicipio.getNome())){
-                return;
-            }
-
-            filteredListMunicipio.setPredicate(municipio -> {
-                if(newValue == null || newValue.isEmpty()){
-                    return true;
-                }
-
-                String nomeMunicipioMinusculo = newValue.toLowerCase();
-
-                if(municipio.getNome().toLowerCase().contains(nomeMunicipioMinusculo)){
-                    return true;
-                }
-
-                return false;
-            });
-            campoMunicipioEndereco.show();
-        });
-
-        campoEstado.focusedProperty().addListener((obs, oldVal, ganhouFoco) -> {
-            if (ganhouFoco) {
-                filteredListEstados.setPredicate(p -> true);
-                campoEstado.show();
-            }
-        });
-
-        campoMunicipioEndereco.focusedProperty().addListener((obs, oldVal, ganhouFoco) -> {
-            if (ganhouFoco) {
-                filteredListMunicipio.setPredicate(p -> true);
-                campoMunicipioEndereco.show();
-            }
+        btnNovoEndereco.setOnAction(e->{
+            System.out.println(autoCompleteListaMunicipios.getSelectedItem().getNome() + autoCompleteListaMunicipios.getSelectedItem().getId());
         });
 
         Label labelPais = new Label("País");
@@ -554,71 +540,65 @@ public class ClienteView {
         campoPais.setDisable(true);
 
         // --- 2. LAYOUT EM GRADE ---
-        // Usando a mesma estrutura de grade 4 colunas do seu createAbaGeral()
-
         GridPane gridEndereco = new GridPane();
         gridEndereco.setHgap(20);
         gridEndereco.setVgap(10);
         gridEndereco.setPadding(new Insets(10, 0, 0, 0));
 
-        ColumnConstraints cc = new ColumnConstraints();
-        cc.setHgrow(Priority.ALWAYS);
-        // 4 colunas com crescimento igual
-        gridEndereco.getColumnConstraints().addAll(cc, cc, cc, cc);
+        ColumnConstraints col0 = new ColumnConstraints();
+        col0.setPercentWidth(30); // Nome, Rua, Bairro
 
-        // Linha 0: Rótulos
+        ColumnConstraints col1 = new ColumnConstraints();
+        col1.setPercentWidth(25); // Tipo, Número
+
+        ColumnConstraints col2 = new ColumnConstraints();
+        col2.setPercentWidth(25); // CEP, Município
+
+        ColumnConstraints col3 = new ColumnConstraints();
+        col3.setPercentWidth(20); // País, Complemento, Estado
+
+        col0.setHgrow(Priority.SOMETIMES);
+        col1.setHgrow(Priority.SOMETIMES);
+        col2.setHgrow(Priority.SOMETIMES);
+        col3.setHgrow(Priority.SOMETIMES);
+
+        gridEndereco.getColumnConstraints().addAll(col0, col1, col2, col3);
+
+
         gridEndereco.add(labelNome, 0, 0);
         gridEndereco.add(labelTipoEndereco, 1, 0);
         gridEndereco.add(labelCEP, 2, 0);
         gridEndereco.add(labelPais, 3, 0);
 
-        // Linha 1: Campos
+
         gridEndereco.add(campoNomeEndereco, 0, 1);
         gridEndereco.add(campoTipoEndereco, 1, 1);
         gridEndereco.add(campoCEP, 2, 1);
         gridEndereco.add(campoPais, 3, 1);
 
-        // Linha 2: Rótulos
+
         gridEndereco.add(labelRua, 0, 2);
         gridEndereco.add(labelNumero, 1, 2);
         gridEndereco.add(labelComplemento, 2, 2);
-        gridEndereco.add(labelBairro, 3, 2);
+        //gridEndereco.add(labelBairro, 3, 2);
 
-        // Linha 3: Campos
+
         gridEndereco.add(campoRua, 0, 3);
+        //GridPane.setColumnSpan(campoRua, 2); // Rua ocupa 2 colunas (mais espaço)
         gridEndereco.add(campoNumero, 1, 3);
         gridEndereco.add(campoComplemento, 2, 3);
-        gridEndereco.add(campoBairro, 3, 3);
-        // Fazendo a rua ocupar 2 colunas para mais espaço
-        GridPane.setColumnSpan(campoRua, 2);
-        // Reajustando a linha 3 por causa do span
-        gridEndereco.getChildren().removeAll(campoNumero, labelComplemento, campoComplemento, labelBairro, campoBairro); // Limpa
-        gridEndereco.add(campoNumero, 2, 3);     // Move Número para col 2
-        gridEndereco.add(labelComplemento, 3, 2); // Move Complemento label para col 3
-        gridEndereco.add(campoComplemento, 3, 3); // Move Complemento campo para col 3
 
 
-        // Linha 4: Rótulos
-        gridEndereco.add(labelBairro, 0, 4); // Bairro movido para cá
+        gridEndereco.add(labelBairro, 0, 4);
         gridEndereco.add(labelMunicipio, 1, 4);
         gridEndereco.add(labelEstado, 2, 4);
 
-        // Linha 5: Campos
-        gridEndereco.add(campoBairro, 0, 5); // Bairro movido para cá
-        gridEndereco.add(campoMunicipioEndereco, 1, 5);
-        gridEndereco.add(campoEstado, 2, 5);
-        // Bairro e Municipio podem ocupar mais espaço
-        GridPane.setColumnSpan(campoBairro, 2);
-        GridPane.setColumnSpan(campoMunicipioEndereco, 2);
-        // Reajuste final
-        gridEndereco.getChildren().removeAll(labelMunicipio, campoMunicipioEndereco, labelEstado, campoEstado);
-        gridEndereco.add(labelMunicipio, 2, 4); // Municipio label na col 2 (span 2)
-        gridEndereco.add(campoMunicipioEndereco, 2, 5); // Municipio campo na col 2 (span 2)
-        gridEndereco.add(labelEstado, 0, 6); // Estado na próxima linha
-        gridEndereco.add(campoEstado, 0, 7); // Estado na próxima linha
 
+        gridEndereco.add(campoBairro, 0, 5);
+        //GridPane.setColumnSpan(campoBairro, 2); // Bairro ocupa 2 colunas
+        gridEndereco.add(campoMunicipioEndereco, 1, 5); // Município (ComboBox)
+        gridEndereco.add(campoEstado, 2, 5); // Estado
 
-        // Preenchimento automático de largura (igual ao seu)
         GridPane.setFillWidth(campoNomeEndereco, true);
         GridPane.setFillWidth(campoTipoEndereco, true);
         GridPane.setFillWidth(campoCEP, true);
@@ -630,23 +610,45 @@ public class ClienteView {
         GridPane.setFillWidth(campoMunicipioEndereco, true);
         GridPane.setFillWidth(campoEstado, true);
 
+// ----------------------
+// Controle individual de tamanho
+// ----------------------
+
+// Campo Município (ComboBox) menor
+        campoMunicipioEndereco.setMaxWidth(300);
+        GridPane.setHgrow(campoMunicipioEndereco, Priority.NEVER);
+
+// Campo Estado também fixo (opcional)
+        campoEstado.setMaxWidth(150);
+
+        GridPane.setHgrow(campoEstado, Priority.NEVER);
+
+// Campo Número pode ser menor
+        campoNumero.setPrefWidth(100);
+        campoNumero.setMaxWidth(100);
+        GridPane.setHgrow(campoNumero, Priority.NEVER);
+
+// Campos longos continuam responsivos
+        GridPane.setHgrow(campoRua, Priority.ALWAYS);
+        GridPane.setHgrow(campoNomeEndereco, Priority.ALWAYS);
+        GridPane.setHgrow(campoBairro, Priority.ALWAYS);
         //nome, tipo_endereco, cep, municipio
+
         // ======== TABELA DE ENDEREÇOS ========
 
-        TableColumn<EnderecoDto, String> colNome = new TableColumn<EnderecoDto, String>("Nome");
+        TableColumn<Endereco, String> colNome = new TableColumn<Endereco, String>("Nome");
         colNome.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getNome()));
 
-        TableColumn<EnderecoDto, String> colTipoEndereco = new TableColumn<EnderecoDto, String>("Tipo endereço");
+        TableColumn<Endereco, String> colTipoEndereco = new TableColumn<Endereco, String>("Tipo endereço");
         colTipoEndereco.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getTipoEndereco()));
 
-        TableColumn<EnderecoDto, String> colCep = new TableColumn<EnderecoDto, String>("Cep");
+        TableColumn<Endereco, String> colCep = new TableColumn<Endereco, String>("Cep");
         colCep.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getCep()));
 
-        TableColumn<EnderecoDto, String> colMunicipio = new TableColumn<EnderecoDto, String>("Municipio");
-        colMunicipio.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getMunicipio()));
-        tabelaEnderecos = new TableView<EnderecoDto>();
-        tabelaEnderecos.getColumns().setAll(List.of(colNome, colTipoEndereco, colCep, colMunicipio));
-        tabelaEnderecos.setItems(listaObservavelEnderecos);
+        TableColumn<Endereco, String> colMunicipio = new TableColumn<Endereco, String>("Municipio");
+        colMunicipio.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getMunicipio().getNome()));
+        tabelaEnderecos = new TableView<Endereco>();
+        tabelaEnderecos.getColumns().setAll(colNome, colTipoEndereco, colCep, colMunicipio);
         tabelaEnderecos.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
         tabelaEnderecos.setPrefHeight(350);
 
@@ -657,6 +659,66 @@ public class ClienteView {
         // Para o caso de esta aba precisar crescer (como a de observações)
         VBox.setVgrow(gridEndereco, Priority.ALWAYS);
 
+        //EVENTOS
+
+
+//        if (btnNovoCliente.getText().equals("Salvar cliente")) {
+//            System.out.println("Verificando validações...");
+//            if (verificarCamposEndereco()) {
+//                System.out.println("Entrou no IF (Salvando)");
+//            }
+//        }else {
+//            btnNovoEndereco.setDisable(false);
+//
+//            limparFormEndereco();
+//
+//            btnNovoEndereco.setOnAction(e -> {
+//                btnSalvarEndereco.setDisable(false);
+//                btnNovoEndereco.setDisable(true);
+//
+//                Endereco endereco = new Endereco();
+//                preencherFormEndereco(endereco);
+//                if(verificarCamposEndereco()){
+//                    clienteAtual.addEndereco(endereco);
+//                    listaObservavelEnderecos.add(endereco);
+//                }
+//            });
+//
+//            limparFormEndereco();
+//        }
+
+        btnNovoEndereco.setOnAction(e -> {
+            btnSalvarEndereco.setDisable(false);
+            btnNovoEndereco.setDisable(true);
+
+            limparFormEndereco();
+            habilitarCamposEndereco(true);
+            campoNomeEndereco.requestFocus();
+
+
+
+        });
+
+        btnSalvarEndereco.setOnAction(e ->{
+            Endereco endereco = new Endereco();
+
+            preencherFormularioNovoEndereco(endereco);
+
+            if(verificarCamposEndereco()){
+                clienteAtual.addEndereco(endereco);
+                listaObservavelEnderecos.add(endereco);
+                tabelaEnderecos.setItems(listaObservavelEnderecos);
+                limparFormEndereco();
+
+                btnSalvarEndereco.setDisable(true);
+                btnNovoEndereco.setDisable(false);
+
+                habilitarCamposEndereco(false);
+            }
+        });
+
+        executarEventos();
+        
         this.layoutAbaEndereco = layoutEndereco;
         return layoutEndereco;
     }
@@ -833,8 +895,7 @@ public class ClienteView {
         //EVENTOS
         btnSelecionar.setOnAction(e -> {
             ClienteBusca clienteSelecionado = tabela.getSelectionModel().getSelectedItem();
-            Optional<Cliente> clienteOptional = clienteRepository.findById(clienteSelecionado.getId());
-
+            Optional<Cliente> clienteOptional = clienteRepository.findByIdWithEnderecos(clienteSelecionado.getId());
             if (clienteOptional.isPresent()) {
                 janelaBuscarClienteStage.close();
 
@@ -865,6 +926,22 @@ public class ClienteView {
                 campoGenero.setValue(clienteAtual.getGenero());
                 campoTipoPessoa.setValue(Utils.converterTipoPessoaCharParaString(clienteAtual.getTipoPessoa()));
 
+                limparFormEndereco();
+
+                if(clienteAtual.getEnderecos() != null && !clienteAtual.getEnderecos().isEmpty()){
+                    Endereco primeiroEndereco = clienteAtual.getEnderecos().getFirst();
+                    habilitarCamposEndereco(true);
+
+                    preencherFormEndereco(primeiroEndereco);
+                }else {
+                    habilitarCamposEndereco(false);
+                }
+
+                listaObservavelEnderecos = FXCollections.observableArrayList(
+                        clienteAtual.getEnderecos()
+                );
+
+                tabelaEnderecos.setItems(listaObservavelEnderecos);
                 onClienteSelecionadoCallback.accept(clienteAtual);
             }
         });
@@ -899,6 +976,7 @@ public class ClienteView {
         clienteAtual.setGenero(campoGenero.getValue());
         clienteAtual.setTipoPessoa(Utils.converterTipoPessoaStringParaChar(campoTipoPessoa.getValue()));
 
+
         return clienteAtual;
     }
 
@@ -932,63 +1010,197 @@ public class ClienteView {
         campoObservacoes.setDisable(true);
     }
 
-    private void preencherFormEndereco(Endereco endereco) {
+    public void getEnderecoFormulario(Endereco endereco){
         campoNomeEndereco.setText(endereco.getNome());
-        campoTipoPessoa.setValue(endereco.getTipoEndereco());
+        campoTipoEndereco.setValue(endereco.getTipoEndereco());
         campoCEP.setText(endereco.getCep());
         campoRua.setText(endereco.getRua());
         campoNumero.setText(endereco.getNumero());
         campoComplemento.setText(endereco.getComplemento());
         campoBairro.setText(endereco.getBairro());
-        campoMunicipioEndereco.setValue(endereco.getMunicipio());
+        autoCompleteListaEstados.setTextSilently(endereco.getEstado());
+
+        Municipio municipioSelecionado = autoCompleteListaMunicipios.getSelectedItem();
+        if (municipioSelecionado != null) {
+            endereco.setMunicipio(municipioSelecionado);
+        }
+
         campoPais.setText(endereco.getPais());
+    }
 
-        String estadoSigla = endereco.getEstado();
+    public void preencherFormEndereco(Endereco endereco) {
+        campoNomeEndereco.setText(endereco.getNome());
+        campoTipoEndereco.setValue(endereco.getTipoEndereco());
+        campoCEP.setText(endereco.getCep());
+        campoRua.setText(endereco.getRua());
+        campoNumero.setText(endereco.getNumero());
+        campoComplemento.setText(endereco.getComplemento());
+        campoBairro.setText(endereco.getBairro());
 
-        Optional<Estado> estadoParaSelecionar = cacheService.getEstadosCache()
-                .stream()
-                .filter(estado -> estado.getSigla().equalsIgnoreCase(estadoSigla))
-                .findFirst();
+        autoCompleteListaEstados.setTextSilently(endereco.getEstado());
+        autoCompleteListaMunicipios.setTextSilently(endereco.getMunicipio().getNome());
+        campoPais.setText(endereco.getPais());
+    }
 
-        if(estadoParaSelecionar.isPresent()){
-            campoEstado.setValue(estadoParaSelecionar.get());
-        }else {
-            campoEstado.getSelectionModel().clearSelection();
+    public void preencherFormularioNovoEndereco(Endereco endereco) {
+        endereco.setNome(campoNomeEndereco.getText());
+        endereco.setTipoEndereco(campoTipoEndereco.getValue());
+        endereco.setCep(campoCEP.getText());
+        endereco.setRua(campoRua.getText());
+        endereco.setNumero(campoNumero.getText());
+        endereco.setComplemento(campoComplemento.getText());
+        endereco.setBairro(campoBairro.getText());
+        endereco.setPais(campoPais.getText());
+
+        // Pega o estado do AutoCompleteTextField
+        endereco.setEstado(autoCompleteListaEstados.getTextField().getText());
+
+        // Pega o objeto Municipio selecionado
+        Municipio municipioSelecionado = autoCompleteListaMunicipios.getSelectedItem();
+        if (municipioSelecionado != null) {
+            endereco.setMunicipio(municipioSelecionado);
         }
     }
 
-    private void limparFormEndereco() {
+    public void limparFormEndereco() {
         tabelaEnderecos.getSelectionModel().clearSelection();
-        campoNomeEndereco.setText("");
-        campoTipoPessoa.setValue(null);
-        campoCEP.setText("");
-        campoRua.setText("");
-        campoNumero.setText("");
-        campoComplemento.setText("");
-        campoBairro.setText("");
-        campoMunicipioEndereco.setValue(null);
-        campoPais.setText("");
-        campoEstado.setValue(null);
+        campoNomeEndereco.clear();
+        campoTipoEndereco.setValue(null);
+        campoCEP.clear();
+        campoRua.clear();
+        campoNumero.clear();
+        campoComplemento.clear();
+        campoBairro.clear();
+        autoCompleteListaMunicipios.setSelectedItemSilently(null);
+        autoCompleteListaEstados.setSelectedItemSilently(null);
+        campoPais.setText("Brasil");
     }
-    //Metodo para novo cliente
+
+    /**
+     * Metodo que habilita todos os campos do formulario de cliente para novo cadastro
+     */
     public void prepararNovoCliente() {
         limparEBloquearFormulario();
+
         clienteAtual = new Cliente();
 
-        // Habilita os campos
-        campoNomeCliente.setDisable(false);
-        campoNomeFantasiaAndApelido.setDisable(false);
-        campoTelefone.setDisable(false);
-        campoEmail.setDisable(false);
-        campoCPF.setDisable(false);
-        campoCNPJ.setDisable(false);
-        campoRG.setDisable(false);
-        campoDataNascimento.setDisable(false);
-        campoEstadoCivil.setDisable(false);
-        campoGenero.setDisable(false);
-        campoTipoPessoa.setDisable(false);
-        campoObservacoes.setDisable(false);
+        habilitarCamposCliente(true);
+        //habilitarCamposEndereco(true);
+        listaObservavelEnderecos.clear();
 
         campoNomeCliente.requestFocus();
     }
+
+    /**
+     * Habilita ou desabilita os campos do formulário de cliente.
+     * @param habilitar true para habilitar, false para desabilitar.
+     */
+    private void habilitarCamposCliente(boolean habilitar) {
+        campoNomeCliente.setDisable(!habilitar);
+        campoNomeFantasiaAndApelido.setDisable(!habilitar);
+        campoTelefone.setDisable(!habilitar);
+        campoEmail.setDisable(!habilitar);
+        campoCPF.setDisable(!habilitar);
+        campoCNPJ.setDisable(!habilitar);
+        campoRG.setDisable(!habilitar);
+        campoDataNascimento.setDisable(!habilitar);
+        campoEstadoCivil.setDisable(!habilitar);
+        campoGenero.setDisable(!habilitar);
+        campoTipoPessoa.setDisable(!habilitar);
+        campoObservacoes.setDisable(!habilitar);
+    }
+
+    /**
+     * Habilita ou desabilita os campos do formulário de endereço.
+     * @param habilitar true para habilitar, false para desabilitar.
+     */
+    private void habilitarCamposEndereco(boolean habilitar) {
+        campoNomeEndereco.setDisable(!habilitar);
+        campoTipoEndereco.setDisable(!habilitar);
+        campoCEP.setDisable(!habilitar);
+        campoRua.setDisable(!habilitar);
+        campoNumero.setDisable(!habilitar);
+        campoComplemento.setDisable(!habilitar);
+        campoBairro.setDisable(!habilitar);
+        campoMunicipioEndereco.setDisable(!habilitar);
+        campoEstado.setDisable(!habilitar);
+        campoPais.setDisable(!habilitar);
+        // Habilita também o botão 'Salvar' da aba endereço, se houver campos
+        // (Assumindo que 'btnSalvar' também foi movido para um campo da classe)
+        // btnSalvar.setDisable(!habilitar);
+    }
+
+    public void executarEventos(){
+        tabelaEnderecos.setRowFactory(tv -> {
+            TableRow<Endereco> row = new TableRow<>();
+
+            row.setOnMouseClicked(event -> {
+                if (event.getClickCount() == 1 && !row.isEmpty()) {
+                    Endereco enderecoSelecionado = row.getItem();
+                    preencherFormEndereco(enderecoSelecionado);
+                }
+            });
+
+            return row;
+        });
+    }
+
+    public boolean verificarCamposObrigatorios(){
+        // 3. Valida o Nome
+        if (campoNomeCliente.getText() == null || campoNomeCliente.getText().trim().isEmpty()) {
+            String nomeCampo = "Física".equals(campoTipoPessoa.getValue()) ? "Nome" : "Razão Social";
+            return exibirErro(campoNomeCliente, "O campo '" + nomeCampo + "' é obrigatório.");
+        }
+
+        // 2. Valida o Tipo de Pessoa (essencial para o CPF/CNPJ)
+        if (campoTipoPessoa.getValue() == null || campoTipoPessoa.getValue().isEmpty()) {
+            return exibirErro(campoTipoPessoa, "O campo 'Tipo de Pessoa' é obrigatório.");
+        }
+
+        // 4. Validação condicional de Documento
+        String tipoPessoa = campoTipoPessoa.getValue();
+
+        if ("Física".equals(tipoPessoa)) {
+            if (campoCPF.getText() == null || campoCPF.getText().trim().isEmpty()) {
+                return exibirErro(campoCPF, "O campo 'CPF' é obrigatório para Pessoa Física.");
+            }
+            // Opcional: Adicionar validação de lógica (DocumentoUtil.validarCPF())
+             if (!DocumentoUtil.validarCPF(campoCPF.getText())) {
+                return exibirErro(campoCPF, "O CPF informado é inválido.");
+             }
+
+        } else if ("Jurídica".equals(tipoPessoa)) {
+            if (campoCNPJ.getText() == null || campoCNPJ.getText().trim().isEmpty()) {
+                return exibirErro(campoCNPJ, "O campo 'CNPJ' é obrigatório para Pessoa Jurídica.");
+            }
+            // Opcional: Adicionar validação de lógica (DocumentoUtil.validarCNPJ())
+             if (!DocumentoUtil.validarCNPJ(campoCNPJ.getText())) {
+                return exibirErro(campoCNPJ, "O CNPJ informado é inválido.");
+             }
+        }
+
+        return true;
+    }
+
+    public boolean verificarCamposEndereco(){
+        if (campoNomeEndereco.getText() == null || campoNomeEndereco.getText().trim().isEmpty()) {
+            return exibirErro(campoNomeEndereco, "O campo 'Nome do Endereço' é obrigatório (Ex: Casa, Trabalho).");
+        }
+        if (campoTipoEndereco.getValue() == null || campoTipoEndereco.getValue().isEmpty()) {
+            return exibirErro(campoTipoEndereco, "O campo 'Tipo de Endereço' é obrigatório.");
+        }
+        if (campoCEP.getText() == null || campoCEP.getText().trim().isEmpty()) {
+            return exibirErro(campoCEP, "O campo 'CEP' é obrigatório.");
+        }
+
+        if (campoMunicipioEndereco.getText() == null || campoMunicipioEndereco.getText().trim().isEmpty()) {
+            return exibirErro(campoMunicipioEndereco, "O campo 'Município' é obrigatório.");
+        }
+        if (campoEstado.getText() == null || campoEstado.getText().trim().isEmpty()) {
+            return exibirErro(campoEstado, "O campo 'Estado (UF)' é obrigatório.");
+        }
+
+        return true;
+    }
+
 }

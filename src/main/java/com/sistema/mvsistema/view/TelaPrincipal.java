@@ -157,12 +157,16 @@ public class TelaPrincipal {
 
 
         clienteView.setOnCloseRequest(() -> {
-            layout.setCenter(conteudoPrincipal());
             clienteView.limparEBloquearFormulario();
+            clienteView.limparFormEndereco();
+            layout.setCenter(conteudoPrincipal());
         });
 
+        StackPane sceneRoot = new StackPane();
+        sceneRoot.getChildren().add(layout);
+
         //Criação do scene
-        Scene scene = new Scene(layout, 900, 600);
+        Scene scene = new Scene(sceneRoot, 900, 600);
         scene.getStylesheets().add(
                 Objects.requireNonNull(getClass().getResource("/static/css/tela-principal-styles.css")).toExternalForm()
         );
