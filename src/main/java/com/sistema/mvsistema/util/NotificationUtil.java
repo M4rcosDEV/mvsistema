@@ -6,14 +6,20 @@ import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.control.Control;
+import javafx.scene.control.*;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
+import javafx.stage.Window;
 import javafx.util.Duration;
+import org.aspectj.weaver.ast.Not;
+import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
 import org.kordamp.ikonli.material2.Material2AL;
 import atlantafx.base.controls.Notification;
+
+import java.util.Optional;
+import java.util.function.Consumer;
 
 
 public class NotificationUtil {
@@ -24,7 +30,7 @@ public class NotificationUtil {
      * @param estilo Estilo a ser aplicado (Styles.DANGER, Styles.WARNING, Styles.ACCENT, etc)
      * @return sempre false para ser usado em cadeias de validação
      */
-    public static boolean exibirErro(Control campo, String mensagem, String estilo) {
+    public static boolean exibirNotificacao(Control campo, String mensagem, String estilo) {
         // 1. Aplica o estilo especificado ao campo
         campo.getStyleClass().add(estilo);
 
@@ -76,7 +82,64 @@ public class NotificationUtil {
     }
 
     // Versão simplificada (vermelho por padrão)
-    public static boolean exibirErro(Control campo, String mensagem) {
-        return exibirErro(campo, mensagem, Styles.DANGER);
+    public static boolean exibirNotificacao(Control campo, String mensagem) {
+        return exibirNotificacao(campo, mensagem, Styles.DANGER);
+    }
+
+    public static void exibirNotificacao(Pane rootPane, String mensagem, String estilo) {
+        final var msg = new Notification(mensagem, new FontIcon(Material2AL.CHECK_CIRCLE_OUTLINE));
+        msg.getStyleClass().addAll(estilo, Styles.ELEVATED_1);
+        msg.setPrefHeight(Region.USE_PREF_SIZE);
+        msg.setMaxHeight(Region.USE_PREF_SIZE);
+
+        StackPane.setAlignment(msg, Pos.TOP_RIGHT);
+        StackPane.setMargin(msg, new Insets(10, 10, 0, 0));
+
+        PauseTransition delay = new PauseTransition(Duration.seconds(3));
+        delay.setOnFinished(e -> rootPane.getChildren().remove(msg));
+
+        if (!rootPane.getChildren().contains(msg)) {
+            rootPane.getChildren().add(msg);
+        }
+
+        delay.play();
+    }
+
+    public static void exibirNotificacao(Pane rootPane, String mensagem, String estilo, Pos ladoNotificacao) {
+        final var msg = new Notification(mensagem, new FontIcon(Material2AL.CHECK_CIRCLE_OUTLINE));
+        msg.getStyleClass().addAll(estilo, Styles.ELEVATED_1);
+        msg.setPrefHeight(Region.USE_PREF_SIZE);
+        msg.setMaxHeight(Region.USE_PREF_SIZE);
+
+        StackPane.setAlignment(msg, ladoNotificacao);
+        StackPane.setMargin(msg, new Insets(10, 10, 0, 0));
+
+        PauseTransition delay = new PauseTransition(Duration.seconds(3));
+        delay.setOnFinished(e -> rootPane.getChildren().remove(msg));
+
+        if (!rootPane.getChildren().contains(msg)) {
+            rootPane.getChildren().add(msg);
+        }
+
+        delay.play();
+    }
+
+    public static boolean exibirNotificacaoConfirmacao(Window owner, String mensagem){
+        var alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Confirmação");
+        alert.setHeaderText(null);
+        alert.setContentText(mensagem);
+
+        DialogPane dialogPane = alert.getDialogPane();
+        dialogPane.getStyleClass().add("custom-alert");
+
+        ButtonType yesBtn = new ButtonType("Sim, Sair", ButtonBar.ButtonData.YES);
+        ButtonType noBtn = new ButtonType("Não, Continuar", ButtonBar.ButtonData.NO);
+
+        alert.getButtonTypes().setAll(yesBtn, noBtn);
+        alert.initOwner(owner.getScene().getWindow());
+
+        Optional<ButtonType> result = alert.showAndWait();
+        return result.isPresent() && result.get() == yesBtn;
     }
 }

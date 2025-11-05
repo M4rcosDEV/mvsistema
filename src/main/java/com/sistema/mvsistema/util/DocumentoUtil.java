@@ -1,7 +1,12 @@
 package com.sistema.mvsistema.util;
 
+import javafx.scene.control.DatePicker;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextFormatter;
+
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 
 public class DocumentoUtil {
     // Metodo para formatar CPF
@@ -232,4 +237,43 @@ public class DocumentoUtil {
         });
     }
 
+    public static void aplicarMarcaraData(DatePicker datePicker){
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+        TextField editor = datePicker.getEditor();
+
+        editor.textProperty().addListener((obs, oldText, newText) -> {
+            String numeros = newText.replaceAll("[^0-9]", "");
+
+            if(numeros.length() > 8){
+                numeros = numeros.substring(0, 8);
+            }
+            StringBuilder formatado = new StringBuilder();
+
+            for(int i=0; i<numeros.length(); i++){
+                formatado.append(numeros.charAt(i));
+
+                if(i == 1 || i == 3){
+                    formatado.append("/");
+                }
+            }
+
+            if (!editor.getText().equals(formatado.toString())) {
+                editor.setText(formatado.toString());
+                editor.positionCaret(formatado.length());
+            }
+
+            editor.focusedProperty().addListener((observableValue, oldFocus, newFocus) -> {
+                if (!newFocus) {
+                    try {
+                        LocalDate data = LocalDate.parse(editor.getText(), formatter);
+                        datePicker.setValue(data);
+                    } catch (DateTimeParseException e) {
+                        datePicker.setValue(null);
+                        editor.setText("");
+                    }
+                }
+            });
+        });
+    }
 }

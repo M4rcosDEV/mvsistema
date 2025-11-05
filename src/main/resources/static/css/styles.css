@@ -128,3 +128,48 @@ Implementar campo obrigatorios
 .auto-complete-listview .scroll-bar:vertical .thumb:hover {
     -fx-background-color: #a8a8a8;
 }
+
+/* alerts.css */
+.custom-alert {
+    -fx-background-color: #f8f9fa;
+    -fx-border-color: #dee2e6;
+    -fx-border-width: 1px;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+}
+
+.custom-alert .header-panel {
+    -fx-background-color: #e9ecef;
+    -fx-border-color: #dee2e6;
+    -fx-border-width: 0 0 1px 0;
+    -fx-padding: 15px;
+}
+
+.custom-alert .content {
+    -fx-padding: 20px;
+    -fx-font-size: 14px;
+    -fx-text-fill: #495057;
+}
+
+.custom-alert .button-bar {
+    -fx-padding: 15px;
+    -fx-background-color: #f8f9fa;
+}
+
+.custom-alert .button {
+    -fx-background-radius: 6px;
+    -fx-border-radius: 6px;
+    -fx-padding: 8px 16px;
+    -fx-font-weight: bold;
+}
+
+.custom-alert .button:default {
+    -fx-background-color: #dc3545; /* Vermelho para o botão de sair */
+    -fx-text-fill: white;
+}
+
+.custom-alert .button:cancel {
+    -fx-background-color: #6c757d;
+    -fx-text-fill: white;
+}
+

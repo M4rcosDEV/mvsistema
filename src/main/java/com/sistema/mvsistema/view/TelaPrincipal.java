@@ -5,6 +5,8 @@ import com.sistema.mvsistema.service.SessaoUsuario;
 import com.sistema.mvsistema.util.Versao;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -107,7 +109,7 @@ public class TelaPrincipal {
         menuAjuda.getItems().add(sobre);
 
         btnSair.setOnAction(e -> {
-            System.out.println("clicou para sair");
+            SessaoUsuario.logout();
             onSair.run();
         });
 
@@ -140,20 +142,25 @@ public class TelaPrincipal {
 
 
         //Eventos
-        cadCliente.setOnAction(e -> {
-            if (telaCadastroCliente == null) {
-                telaCadastroCliente = clienteView.createCadastroClientePane(layout); // cria apenas uma vez
+        cadCliente.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent e) {
+                if (telaCadastroCliente == null) {
+                    telaCadastroCliente = clienteView.createCadastroClientePane(layout); // cria apenas uma vez
+                }
+                layout.setCenter(telaCadastroCliente); // reutiliza a mesma instância
             }
-            layout.setCenter(telaCadastroCliente); // reutiliza a mesma instância
         });
 
-//        cadProduto.setOnAction(e -> {
-//            if (telaCadastroProduto == null) {
-//                ProdutoView produtoView = new ProdutoView();
-//                telaCadastroProduto = produtoView.createAbaProduto(); // cria apenas uma vez
-//            }
-//            layout.setCenter(telaCadastroProduto);
-//        });
+/*
+        cadProduto.setOnAction(e -> {
+            if (telaCadastroProduto == null) {
+                ProdutoView produtoView = new ProdutoView();
+                telaCadastroProduto = produtoView.createAbaProduto();
+            }
+            layout.setCenter(telaCadastroProduto);
+        });
+*/
 
 
         clienteView.setOnCloseRequest(() -> {
@@ -190,21 +197,22 @@ public class TelaPrincipal {
         nomeUsuarioLabelPrincipal.getStyleClass().add("nome-usuario-center-tela-principal");
         VBox.setMargin(nomeUsuarioLabelPrincipal, new Insets(-20, 0, 0, 30));
 
-        VBox vBoxTelaIncial = new VBox(tituloMVSistema, nomeUsuarioLabelPrincipal);
+        VBox vBoxTelaInicial = new VBox(tituloMVSistema, nomeUsuarioLabelPrincipal);
 
         // Centraliza o conteúdo (imagem e label) DENTRO do VBox
-        vBoxTelaIncial.setAlignment(Pos.CENTER);
+        vBoxTelaInicial.setAlignment(Pos.CENTER);
 
         // Criei um StackPane para servir como container central
         StackPane painelCentralWrapper = new StackPane();
-        painelCentralWrapper.getChildren().add(vBoxTelaIncial);
+        painelCentralWrapper.getChildren().add(vBoxTelaInicial);
 
         // Define o alinhamento do VBox DENTRO do StackPane embora CENTER seja o padrão
-        StackPane.setAlignment(vBoxTelaIncial, Pos.CENTER);
+        StackPane.setAlignment(vBoxTelaInicial, Pos.CENTER);
 
         return painelCentralWrapper;
     }
 
+    @SuppressWarnings("unused" )
     private Pane createCadastroProdutoPane() {
         Button btnNovoCliente = new Button(
                 "Novo cliente", new FontIcon (Feather.PLUS)

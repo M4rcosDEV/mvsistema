@@ -5,22 +5,22 @@ import atlantafx.base.controls.Notification;
 import atlantafx.base.theme.Styles;
 import atlantafx.base.util.Animations;
 import com.sistema.mvsistema.dto.ClienteBusca;
-import com.sistema.mvsistema.dto.EnderecoDto;
 import com.sistema.mvsistema.model.Cliente;
 import com.sistema.mvsistema.model.Endereco;
 import com.sistema.mvsistema.model.Estado;
 import com.sistema.mvsistema.model.Municipio;
+import com.sistema.mvsistema.model.enums.EstadoFormulario;
 import com.sistema.mvsistema.repository.ClienteRepository;
 import com.sistema.mvsistema.service.CacheService;
 import com.sistema.mvsistema.service.ClienteService;
-import com.sistema.mvsistema.util.AutoCompleteTextField;
-import com.sistema.mvsistema.util.DocumentoUtil;
-import com.sistema.mvsistema.util.Utils;
+import com.sistema.mvsistema.util.*;
 import javafx.animation.PauseTransition;
 import javafx.application.Platform;
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -42,13 +42,15 @@ import org.springframework.stereotype.Component;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
+import static com.sistema.mvsistema.util.NotificationUtil.exibirNotificacao;
+import static com.sistema.mvsistema.util.NotificationUtil.exibirNotificacaoConfirmacao;
 
-import static com.sistema.mvsistema.util.NotificationUtil.exibirErro;
 
 @Component
 public class ClienteView {
 
     private Cliente clienteAtual;
+    EstadoFormulario estado = EstadoFormulario.NOVO;
 
     //Botoes
     private Button btnNovoCliente;
@@ -57,6 +59,7 @@ public class ClienteView {
 
 
     // Identificação
+    private TextField campoCodCliente = new TextField();
     private TextField campoNomeCliente = new TextField();
     private TextField campoNomeFantasiaAndApelido = new TextField();
     private TextField campoTelefone = new TextField();
@@ -153,18 +156,13 @@ public class ClienteView {
         btnFechar.setMnemonicParsing(false);
         btnFechar.setFocusTraversable(false);
 
-        btnFechar.setOnAction(e -> {
-            onCloseCallback.run();
-        });
-
         HBox botoesAcaoNovoClienteAndBuscaCliente = new HBox();
         botoesAcaoNovoClienteAndBuscaCliente.getChildren().addAll(btnNovoCliente, btnBuscar, btnFechar);
         botoesAcaoNovoClienteAndBuscaCliente.setAlignment(Pos.CENTER_LEFT);
         botoesAcaoNovoClienteAndBuscaCliente.setSpacing(15);
 
         Label labelCliente = new Label("Cliente");
-        TextField campoCodCliente = new TextField();
-        campoCodCliente.setText("1");
+
         campoCodCliente.setEditable(false);
         campoCodCliente.setPrefWidth(100);
 
@@ -196,57 +194,6 @@ public class ClienteView {
         VBox.setVgrow(containerInformacoes, Priority.ALWAYS);
         containerInformacoes.setMaxWidth(Double.MAX_VALUE);
 
-        //EVENTOS
-        btnNovoCliente.setOnAction(e -> {
-            System.out.println("Executou");
-
-            // ESTADO 2: O usuário está clicando em "SALVAR"
-            if (btnNovoCliente.getText().equals("Salvar cliente")) {
-                System.out.println("Verificando validações...");
-                if (verificarCamposObrigatorios()) { // Removi o endereço por enquanto
-                    System.out.println("Entrou no IF (Salvando)");
-
-                    // Sucesso na validação
-                    // limparEBloquearFormulario();
-                    // limparFormEndereco();
-                    if(btnNovoEndereco.isDisable()){
-                        System.out.println("Endereço em edicao");
-                        exibirErro(btnSalvarEndereco, "Endereço em edição, por favor finalize o cadastro do endereço");
-                    }else{
-                        Cliente clienteNovo =  getClienteFormulario();
-                        System.out.println("Cliente INFO" + clienteNovo.toString());
-                        clienteRepository.save(clienteNovo); // Você precisa montar o clienteAtual aqui
-
-
-                        // Reseta o botão para o estado inicial
-                        btnNovoCliente.setText("Novo cliente");
-                        btnNovoCliente.setGraphic(new FontIcon(Feather.PLUS));
-                        btnNovoCliente.getStyleClass().remove(Styles.SUCCESS);
-                    }
-
-
-                    // TODO: Exibir notificação de SUCESSO
-                } else {
-                    System.out.println("Validação falhou.");
-                    // Não faz nada, o método exibirErro() dentro da validação já mostrou o toast.
-                }
-
-            } else {
-                btnNovoEndereco.setDisable(false);
-
-                // ESTADO 1: O usuário está clicando em "NOVO CLIENTE"
-                System.out.println("Entrou no ELSE (Preparando para novo)");
-
-                // Define o texto para o PRÓXIMO estado
-                btnNovoCliente.setText("Salvar cliente");
-                btnNovoCliente.setGraphic(new FontIcon(Feather.CHECK));
-                btnNovoCliente.getStyleClass().add(Styles.SUCCESS);
-
-                // Apenas prepara o formulário para um novo cliente
-                 prepararNovoCliente(); // Descomente seus métodos de preparação
-            }
-        });
-
         // --- 6. LAYOUT PRINCIPAL ---
         VBox layoutPrincipal = new VBox(15, botoesAcaoNovoClienteAndBuscaCliente, blocoBrancoEstilizado);
 
@@ -256,7 +203,108 @@ public class ClienteView {
 
         //Garante que o bloco branco ocupe o restante da altura do layout principal.
         VBox.setVgrow(blocoBrancoEstilizado, Priority.ALWAYS);
-        return layoutPrincipal;
+
+        LoadingIndicadorUtil loading = new LoadingIndicadorUtil();
+
+
+
+        StackPane rootPane = new StackPane(layoutPrincipal,loading);
+        rootPane.setPrefSize(Region.USE_COMPUTED_SIZE, Region.USE_COMPUTED_SIZE);
+
+
+        //EVENTOS
+        btnNovoCliente.setOnAction(e -> {
+
+            System.out.println("Executou");
+            System.out.println("Estado atual clicou: " + estado);
+            switch (estado){
+                case NOVO -> {
+                    System.out.println("Estado atual clicou case NOVO: " + estado);
+                    btnNovoCliente.setText("Salvar cliente");
+                    btnNovoEndereco.setDisable(false);
+                    btnNovoCliente.setGraphic(new FontIcon(Feather.CHECK));
+                    btnNovoCliente.getStyleClass().add(Styles.SUCCESS);
+                    prepararNovoCliente();
+                    estado = EstadoFormulario.EDICAO;
+                }
+                case EDICAO -> {
+                    if(verificarCamposObrigatorios()){
+                        if(!listaObservavelEnderecos.isEmpty()){
+                            Cliente cliente = getClienteFormulario();
+
+                            Task<Void> task = new Task<>() {
+                                @Override
+                                protected Void call() throws Exception {
+                                    Thread.sleep(5000);
+                                    clienteRepository.save(cliente);
+                                    return null;
+                                }
+
+                            };
+
+                            task.setOnRunning(eventRunning ->{
+                                loading.show();
+                                btnNovoCliente.setDisable(true);
+                                exibirNotificacao(rootPane, "Salvando cliente...", Styles.ACCENT);
+                            });
+
+                            task.setOnSucceeded(eventSuccess ->{
+                                loading.hide();
+                                btnNovoCliente.setDisable(false);
+                                btnNovoCliente.setText("Novo cliente");
+
+                                btnNovoCliente.getStyleClass().remove(Styles.SUCCESS);
+                                btnNovoCliente.getStyleClass().add(Styles.ACCENT);
+                                btnNovoCliente.setGraphic(new FontIcon(Feather.PLUS));
+                                limparEBloquearFormulario();
+                                limparFormEndereco();
+                                estado = EstadoFormulario.NOVO;
+                                habilitarCamposCliente(false);
+                                exibirNotificacao(rootPane, "Cliente salvo com sucesso!", Styles.SUCCESS);
+                            });
+
+                            task.setOnFailed(eventFailed ->{
+                                loading.hide();
+                                btnNovoCliente.setDisable(false);
+                                exibirNotificacao(rootPane, "Erro ao salvar cliente!", Styles.DANGER, Pos.TOP_LEFT);
+                            });
+
+
+                            new Thread(task).start();
+                        }else{
+                            exibirNotificacao(rootPane, "Adicione um endereço", Styles.DANGER, Pos.TOP_LEFT);
+                        }
+                    }
+                }
+            }
+        });
+
+        btnFechar.setOnAction(e -> {
+            if(estado.isModeEdicao()){
+
+                if(exibirNotificacaoConfirmacao(
+                        btnFechar.getScene().getWindow(),
+                        "Deseja realmente sair sem salvar as alterações do cliente?"
+                )){
+                    btnNovoCliente.setText("Novo cliente");
+                    btnNovoCliente.getStyleClass().remove(Styles.SUCCESS);
+                    btnNovoCliente.getStyleClass().add(Styles.ACCENT);
+                    btnNovoCliente.setMnemonicParsing(false);
+                    btnNovoCliente.setFocusTraversable(false);
+                    btnNovoCliente.setGraphic(new FontIcon(Feather.PLUS));
+                    estado = EstadoFormulario.NOVO;
+                    limparEBloquearFormulario();
+                    limparFormEndereco();
+                    onCloseCallback.run();
+                }
+            }else{
+                limparEBloquearFormulario();
+                limparFormEndereco();
+                onCloseCallback.run();
+            }
+        });
+
+        return rootPane;
     }
 
     public Pane createAbaGeral() {
@@ -281,6 +329,7 @@ public class ClienteView {
         campoCPF.setDisable(true);
 
         Label labelRG = new Label("RG / Inscrição Estadual");
+        campoRG.setPromptText("Informe seu RG ou IE");
         campoRG.setDisable(true);
 
         Label labelCNPJ = new Label("CNPJ");
@@ -290,6 +339,7 @@ public class ClienteView {
 
         Label labelDataNascimento = new Label("Data Nascimento");
         campoDataNascimento.setPromptText("dd/mm/aaaa");
+        DocumentoUtil.aplicarMarcaraData(campoDataNascimento);
         campoDataNascimento.setDisable(true);
 
         // Contato
@@ -310,7 +360,7 @@ public class ClienteView {
 
         Label labelTipoPessoa = new Label("Tipo de pessoa");
         campoTipoPessoa.getItems().addAll("Física", "Jurídica", "Produtor", "Instituição");
-        campoTipoPessoa.setPromptText("Selecione o tipo de pessoa");
+        campoTipoPessoa.getSelectionModel().selectFirst();
         campoTipoPessoa.setDisable(true);
 
         Label labelEstadoCivil = new Label("Estado Civil");
@@ -427,9 +477,6 @@ public class ClienteView {
     public Pane createAbaEndereco() {
         listaObservavelEnderecos = FXCollections.observableArrayList();
 
-//        btnNovoEndereco = new Button(
-//                "Novo endereço", new FontIcon (Feather.PLUS)
-//        );
         btnNovoEndereco.setText("Novo endereço");
         btnNovoEndereco.setGraphic(new FontIcon(Feather.PLUS));
         btnNovoEndereco.getStyleClass().add(Styles.ACCENT);
@@ -661,32 +708,6 @@ public class ClienteView {
 
         //EVENTOS
 
-
-//        if (btnNovoCliente.getText().equals("Salvar cliente")) {
-//            System.out.println("Verificando validações...");
-//            if (verificarCamposEndereco()) {
-//                System.out.println("Entrou no IF (Salvando)");
-//            }
-//        }else {
-//            btnNovoEndereco.setDisable(false);
-//
-//            limparFormEndereco();
-//
-//            btnNovoEndereco.setOnAction(e -> {
-//                btnSalvarEndereco.setDisable(false);
-//                btnNovoEndereco.setDisable(true);
-//
-//                Endereco endereco = new Endereco();
-//                preencherFormEndereco(endereco);
-//                if(verificarCamposEndereco()){
-//                    clienteAtual.addEndereco(endereco);
-//                    listaObservavelEnderecos.add(endereco);
-//                }
-//            });
-//
-//            limparFormEndereco();
-//        }
-
         btnNovoEndereco.setOnAction(e -> {
             btnSalvarEndereco.setDisable(false);
             btnNovoEndereco.setDisable(true);
@@ -695,8 +716,7 @@ public class ClienteView {
             habilitarCamposEndereco(true);
             campoNomeEndereco.requestFocus();
 
-
-
+            estado = EstadoFormulario.EDICAO;
         });
 
         btnSalvarEndereco.setOnAction(e ->{
@@ -914,6 +934,7 @@ public class ClienteView {
                 campoTipoPessoa.setDisable(false);
                 campoObservacoes.setDisable(false);
 
+                campoCodCliente.setText(clienteAtual.getId().toString());
                 campoNomeCliente.setText(clienteAtual.getNome());
                 campoNomeFantasiaAndApelido.setText(clienteAtual.getSobrenome());
                 campoTelefone.setText(clienteAtual.getTelefone());
@@ -942,6 +963,7 @@ public class ClienteView {
                 );
 
                 tabelaEnderecos.setItems(listaObservavelEnderecos);
+                estado = EstadoFormulario.EDICAO;
                 onClienteSelecionadoCallback.accept(clienteAtual);
             }
         });
@@ -956,58 +978,22 @@ public class ClienteView {
             clienteAtual = new Cliente();
         }
 
+        String tipoPessoaBanco = ConstantesUtil.getTipoPessoaBanco(campoTipoPessoa.getValue());
+        String genero = ConstantesUtil.getGeneroBanco(campoGenero.getValue());
+        String estadoCivil = ConstantesUtil.getEstadoCivilBanco(campoGenero.getValue());
+
         clienteAtual.setNome(campoNomeCliente.getText());
         clienteAtual.setSobrenome(campoNomeFantasiaAndApelido.getText());
         clienteAtual.setTelefone(campoTelefone.getText());
         clienteAtual.setEmail(campoEmail.getText());
-
-        String tipoPessoa = campoTipoPessoa.getValue();
-        if ("Jurídico".equals(tipoPessoa) || "Instituição".equals(tipoPessoa)) {
-            clienteAtual.setCpfCnpj(campoCNPJ.getText());
-        } else if ("Física".equals(tipoPessoa) || "Produtor".equals(tipoPessoa)) {
-            clienteAtual.setCpfCnpj(campoCPF.getText());
-        } else {
-            clienteAtual.setCpfCnpj(null);
-        }
-
         clienteAtual.setRegistro(campoRG.getText());
         clienteAtual.setDataNascimento(campoDataNascimento.getValue());
-        clienteAtual.setEstadoCivil(campoEstadoCivil.getValue());
-        clienteAtual.setGenero(campoGenero.getValue());
-        clienteAtual.setTipoPessoa(Utils.converterTipoPessoaStringParaChar(campoTipoPessoa.getValue()));
 
+        clienteAtual.setTipoPessoa(tipoPessoaBanco);
+        clienteAtual.setGenero(genero);
+        clienteAtual.setEstadoCivil(estadoCivil);
 
         return clienteAtual;
-    }
-
-    public void limparEBloquearFormulario() {
-        clienteAtual = null; // Limpa o cliente em memória
-
-        campoNomeCliente.setText("");
-        campoNomeFantasiaAndApelido.setText("");
-        campoTelefone.setText("");
-        campoEmail.setText("");
-        campoCPF.setText("");
-        campoCNPJ.setText("");
-        campoRG.setText("");
-        campoDataNascimento.setValue(null);
-        campoEstadoCivil.setValue(null);
-        campoTipoPessoa.setValue(null);
-        campoGenero.setValue(null);
-        campoObservacoes.setText("");
-
-        campoNomeCliente.setDisable(true);
-        campoNomeFantasiaAndApelido.setDisable(true);
-        campoTelefone.setDisable(true);
-        campoEmail.setDisable(true);
-        campoCPF.setDisable(true);
-        campoCNPJ.setDisable(true);
-        campoRG.setDisable(true);
-        campoDataNascimento.setDisable(true);
-        campoEstadoCivil.setDisable(true);
-        campoGenero.setDisable(true);
-        campoTipoPessoa.setDisable(true);
-        campoObservacoes.setDisable(true);
     }
 
     public void getEnderecoFormulario(Endereco endereco){
@@ -1062,10 +1048,40 @@ public class ClienteView {
         }
     }
 
+    public void limparEBloquearFormulario() {
+        clienteAtual = null; // Limpa o cliente em memória
+
+        campoNomeCliente.setText("");
+        campoNomeFantasiaAndApelido.setText("");
+        campoTelefone.setText("");
+        campoEmail.setText("");
+        campoCPF.setText("");
+        campoCNPJ.setText("");
+        campoRG.setText("");
+        campoDataNascimento.setValue(null);
+        campoTipoPessoa.getSelectionModel().selectFirst();
+        campoGenero.getSelectionModel().clearSelection();
+        campoEstadoCivil.getSelectionModel().clearSelection();
+        campoObservacoes.setText("");
+
+        campoNomeCliente.setDisable(true);
+        campoNomeFantasiaAndApelido.setDisable(true);
+        campoTelefone.setDisable(true);
+        campoEmail.setDisable(true);
+        campoCPF.setDisable(true);
+        campoCNPJ.setDisable(true);
+        campoRG.setDisable(true);
+        campoDataNascimento.setDisable(true);
+        campoEstadoCivil.setDisable(true);
+        campoGenero.setDisable(true);
+        campoTipoPessoa.setDisable(true);
+        campoObservacoes.setDisable(true);
+    }
+
     public void limparFormEndereco() {
         tabelaEnderecos.getSelectionModel().clearSelection();
         campoNomeEndereco.clear();
-        campoTipoEndereco.setValue(null);
+        campoTipoEndereco.getSelectionModel().selectFirst();
         campoCEP.clear();
         campoRua.clear();
         campoNumero.clear();
@@ -1149,12 +1165,12 @@ public class ClienteView {
         // 3. Valida o Nome
         if (campoNomeCliente.getText() == null || campoNomeCliente.getText().trim().isEmpty()) {
             String nomeCampo = "Física".equals(campoTipoPessoa.getValue()) ? "Nome" : "Razão Social";
-            return exibirErro(campoNomeCliente, "O campo '" + nomeCampo + "' é obrigatório.");
+            return exibirNotificacao(campoNomeCliente, "O campo '" + nomeCampo + "' é obrigatório.");
         }
 
         // 2. Valida o Tipo de Pessoa (essencial para o CPF/CNPJ)
         if (campoTipoPessoa.getValue() == null || campoTipoPessoa.getValue().isEmpty()) {
-            return exibirErro(campoTipoPessoa, "O campo 'Tipo de Pessoa' é obrigatório.");
+            return exibirNotificacao(campoTipoPessoa, "O campo 'Tipo de Pessoa' é obrigatório.");
         }
 
         // 4. Validação condicional de Documento
@@ -1162,20 +1178,20 @@ public class ClienteView {
 
         if ("Física".equals(tipoPessoa)) {
             if (campoCPF.getText() == null || campoCPF.getText().trim().isEmpty()) {
-                return exibirErro(campoCPF, "O campo 'CPF' é obrigatório para Pessoa Física.");
+                return exibirNotificacao(campoCPF, "O campo 'CPF' é obrigatório para Pessoa Física.");
             }
             // Opcional: Adicionar validação de lógica (DocumentoUtil.validarCPF())
              if (!DocumentoUtil.validarCPF(campoCPF.getText())) {
-                return exibirErro(campoCPF, "O CPF informado é inválido.");
+                return exibirNotificacao(campoCPF, "O CPF informado é inválido.");
              }
 
         } else if ("Jurídica".equals(tipoPessoa)) {
             if (campoCNPJ.getText() == null || campoCNPJ.getText().trim().isEmpty()) {
-                return exibirErro(campoCNPJ, "O campo 'CNPJ' é obrigatório para Pessoa Jurídica.");
+                return exibirNotificacao(campoCNPJ, "O campo 'CNPJ' é obrigatório para Pessoa Jurídica.");
             }
             // Opcional: Adicionar validação de lógica (DocumentoUtil.validarCNPJ())
              if (!DocumentoUtil.validarCNPJ(campoCNPJ.getText())) {
-                return exibirErro(campoCNPJ, "O CNPJ informado é inválido.");
+                return exibirNotificacao(campoCNPJ, "O CNPJ informado é inválido.");
              }
         }
 
@@ -1184,20 +1200,20 @@ public class ClienteView {
 
     public boolean verificarCamposEndereco(){
         if (campoNomeEndereco.getText() == null || campoNomeEndereco.getText().trim().isEmpty()) {
-            return exibirErro(campoNomeEndereco, "O campo 'Nome do Endereço' é obrigatório (Ex: Casa, Trabalho).");
+            return exibirNotificacao(campoNomeEndereco, "O campo 'Nome do Endereço' é obrigatório (Ex: Casa, Trabalho).");
         }
         if (campoTipoEndereco.getValue() == null || campoTipoEndereco.getValue().isEmpty()) {
-            return exibirErro(campoTipoEndereco, "O campo 'Tipo de Endereço' é obrigatório.");
+            return exibirNotificacao(campoTipoEndereco, "O campo 'Tipo de Endereço' é obrigatório.");
         }
         if (campoCEP.getText() == null || campoCEP.getText().trim().isEmpty()) {
-            return exibirErro(campoCEP, "O campo 'CEP' é obrigatório.");
+            return exibirNotificacao(campoCEP, "O campo 'CEP' é obrigatório.");
         }
 
         if (campoMunicipioEndereco.getText() == null || campoMunicipioEndereco.getText().trim().isEmpty()) {
-            return exibirErro(campoMunicipioEndereco, "O campo 'Município' é obrigatório.");
+            return exibirNotificacao(campoMunicipioEndereco, "O campo 'Município' é obrigatório.");
         }
         if (campoEstado.getText() == null || campoEstado.getText().trim().isEmpty()) {
-            return exibirErro(campoEstado, "O campo 'Estado (UF)' é obrigatório.");
+            return exibirNotificacao(campoEstado, "O campo 'Estado (UF)' é obrigatório.");
         }
 
         return true;

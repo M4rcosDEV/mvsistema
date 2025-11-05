@@ -17,21 +17,8 @@ public class ClienteService {
     private ClienteRepository clienteRepository;
 
     public Page<ClienteBusca> buscarClientes(String nome, String tipoPessoa, String cpfCnpj, Pageable pageable) {
-//        String nomeFiltro = (nome != null && !nome.isBlank()) ? nome : null;
-//        String tipoPessoaFiltro = (tipoPessoa != null && !tipoPessoa.isBlank()) ? tipoPessoa : null;
-//        String cpfCnpjFiltro = (cpfCnpj != null && !cpfCnpj.isBlank()) ? cpfCnpj : null;
 
         Page<ClienteBusca> clientes = clienteRepository.buscarClientesComFiltros(nome, tipoPessoa, cpfCnpj, pageable);
-
-//        return clientes.stream()
-//                .map(c -> new ClienteBusca(
-//                        c.getId(),
-//                        c.getNome(),
-//                        c.getCpfCnpj(),
-//                        c.getTipoPessoa(),
-//                        c.getTelefone()
-//                ))
-//                .toList();
 
         return clientes.map(c-> new ClienteBusca(
                 c.getId(),
@@ -40,19 +27,5 @@ public class ClienteService {
                 c.getTipoPessoa(),
                 c.getTelefone()
         ));
-    }
-
-    public Cliente salvar(Cliente cliente){
-        return clienteRepository.save(cliente);
-    }
-
-    public List<ClienteBusca> buscar(String nome) {
-        List<ClienteBusca> clientes = clienteRepository.findByNomeStartsWith(nome);
-
-        for (ClienteBusca cliente : clientes) {
-            System.out.println(cliente);
-        }
-
-        return clientes;
     }
 }
