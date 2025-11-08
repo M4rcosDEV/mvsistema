@@ -1,16 +1,8 @@
 package com.sistema.mvsistema;
 
 import atlantafx.base.theme.PrimerLight;
-import com.sistema.mvsistema.dto.EnderecoDTO;
-import com.sistema.mvsistema.model.Cliente;
-import com.sistema.mvsistema.model.Endereco;
-import com.sistema.mvsistema.model.Municipio;
-import com.sistema.mvsistema.repository.ClienteRepository;
-import com.sistema.mvsistema.service.CepService;
-import com.sistema.mvsistema.service.ClienteService;
-import com.sistema.mvsistema.util.DocumentoUtil;
 import com.sistema.mvsistema.util.EstilosGlobal;
-import com.sistema.mvsistema.view.ClienteView;
+import com.sistema.mvsistema.view.cadastros.ClienteView;
 import com.sistema.mvsistema.view.TelaLogin;
 import com.sistema.mvsistema.view.TelaPrincipal;
 import javafx.application.Application;
@@ -18,22 +10,14 @@ import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationListener;
 import com.sistema.mvsistema.MainApplication.StageReadyEvent;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
 import java.util.Objects;
 
 @Component
 public class StageInicial implements ApplicationListener<StageReadyEvent> {
-    @Autowired
-    ClienteService clienteService;
-
-    @Autowired
-    CepService cepService;
-
     private final TelaLogin telaLogin;
     private final TelaPrincipal telaPrincipal;
     private final EstilosGlobal estilosGlobal;
@@ -54,9 +38,6 @@ public class StageInicial implements ApplicationListener<StageReadyEvent> {
 
         Application.setUserAgentStylesheet(new PrimerLight().getUserAgentStylesheet());
 
-        EnderecoDTO endereco = cepService.buscarEnderecoPorCep("47800753");
-        System.out.println(endereco);
-
         VBox root = new VBox();
         Stage stage = event.getStage();
         stage.setScene(new Scene(root, 800, 600));
@@ -67,7 +48,7 @@ public class StageInicial implements ApplicationListener<StageReadyEvent> {
                 getClass().getResourceAsStream("/static/imagens/logo.png")
         )));
 
-        this.loginScene = telaLogin.createScene(this::mostrarTelaPrincipal);
+        this.loginScene = telaLogin.createScene(this::mostrarTelaPrincipal, this.primaryStage);
 
         mostrarTelaLogin();
     }

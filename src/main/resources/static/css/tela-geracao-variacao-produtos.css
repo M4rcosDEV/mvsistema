@@ -1,0 +1,21 @@
+.list-view-grade{
+    /* Cor de fundo do item selecionado (quando o ListView NÃO está focado) */
+    -color-cell-bg-selected: #007bff;
+
+    /* Cor do texto do item selecionado (quando o ListView NÃO está focado) */
+    -color-cell-fg-selected: white;
+
+    /* Cor de fundo do item selecionado (quando o ListView ESTÁ focado) */
+    -color-cell-bg-selected-focused: #007bff; /* Um azul mais escuro para foco */
+
+    /* Cor do texto do item selecionado (quando o ListView ESTÁ focado) */
+    -color-cell-fg-selected-focused: white;
+}
+
+.vbox-list-view-grade{
+
+}
+
+.hbox-rodape{
+
+}

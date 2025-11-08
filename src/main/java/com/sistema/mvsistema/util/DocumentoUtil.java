@@ -7,19 +7,67 @@ import javafx.scene.control.TextFormatter;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class DocumentoUtil {
-    // Metodo para formatar CPF
-    public static String formatarCPF(String cpf) {
-        cpf = cpf.replaceAll("[^0-9]", ""); // Remover caracteres não numéricos
-        return cpf.replaceAll("(\\d{3})(\\d{3})(\\d{3})(\\d{2})", "$1.$2.$3-$4");
+
+    public enum TipoDocumento { CPF, CNPJ }
+
+    public static void configurarCampoDocumentoAdaptavel(TextField campo, AtomicReference<TipoDocumento> tipoAtual) {
+        final boolean[] alterando = {false};
+
+        campo.textProperty().addListener((obs, oldValue, newValue) -> {
+            if (alterando[0]) return;
+            if (newValue == null) return;
+
+            String numeros = newValue.replaceAll("[^0-9]", "");
+            int limite = (tipoAtual.get() == TipoDocumento.CPF ? 11 : 14);
+            if (numeros.length() > limite) numeros = numeros.substring(0, limite);
+
+            String formatado = (tipoAtual.get() == TipoDocumento.CPF)
+                    ? formatarCpf(numeros)
+                    : formatarCnpj(numeros);
+
+            if (!formatado.equals(campo.getText())) {
+                alterando[0] = true;
+                campo.setText(formatado);
+                campo.positionCaret(formatado.length());
+                alterando[0] = false;
+            }
+        });
     }
 
-    // Metodo para formatar CNPJ
-    public static String formatarCNPJ(String cnpj) {
-        cnpj = cnpj.replaceAll("[^0-9]", ""); // Remove caracteres não numéricos
-        return cnpj.replaceAll("(\\d{2})(\\d{3})(\\d{3})(\\d{4})(\\d{2})", "$1.$2.$3/$4-$5");
+    private static String formatarCpf(String numeros) {
+        StringBuilder f = new StringBuilder();
+        int len = numeros.length();
+        if (len > 0) f.append(numeros, 0, Math.min(3, len));
+        if (len > 3) f.append(".").append(numeros, 3, Math.min(6, len));
+        if (len > 6) f.append(".").append(numeros, 6, Math.min(9, len));
+        if (len > 9) f.append("-").append(numeros, 9, Math.min(11, len));
+        return f.toString();
     }
+
+    private static String formatarCnpj(String numeros) {
+        StringBuilder f = new StringBuilder();
+        int len = numeros.length();
+        if (len > 0) f.append(numeros, 0, Math.min(2, len));
+        if (len > 2) f.append(".").append(numeros, 2, Math.min(5, len));
+        if (len > 5) f.append(".").append(numeros, 5, Math.min(8, len));
+        if (len > 8) f.append("/").append(numeros, 8, Math.min(12, len));
+        if (len > 12) f.append("-").append(numeros, 12, Math.min(14, len));
+        return f.toString();
+    }
+//    // Metodo para formatar CPF
+//    public static String formatarCPF(String cpf) {
+//        cpf = cpf.replaceAll("[^0-9]", ""); // Remover caracteres não numéricos
+//        return cpf.replaceAll("(\\d{3})(\\d{3})(\\d{3})(\\d{2})", "$1.$2.$3-$4");
+//    }
+//
+//    // Metodo para formatar CNPJ
+//    public static String formatarCNPJ(String cnpj) {
+//        cnpj = cnpj.replaceAll("[^0-9]", ""); // Remove caracteres não numéricos
+//        return cnpj.replaceAll("(\\d{2})(\\d{3})(\\d{3})(\\d{4})(\\d{2})", "$1.$2.$3/$4-$5");
+//    }
 
     // Metodo para validar CPF
     public static boolean validarCPF(String cpf) {
@@ -91,6 +139,10 @@ public class DocumentoUtil {
     // Metodo para formatar CPF enquanto usuario digita
     public static void aplicarMascaraCpf(TextField textField) {
         textField.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue == null || newValue.isEmpty()) {
+                return;
+            }
+
             String numeros = newValue.replaceAll("[^0-9]", "");
 
             if (numeros.length() > 11) {
@@ -114,7 +166,12 @@ public class DocumentoUtil {
 
     // Metodo para formatar CNPJ enquanto usuario digita
     public static void aplicarMascaraCnpj(TextField textField) {
+
         textField.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue == null || newValue.isEmpty()) {
+                return;
+            }
+
             String numeros = newValue.replaceAll("[^0-9]", "");
 
             if (numeros.length() > 14) {
@@ -140,6 +197,9 @@ public class DocumentoUtil {
     // Metodo para formatar CPF e CNPJ enquanto usuario digita
     public static void aplicarMascaraCpfCnpj(TextField textField) {
         textField.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue == null || newValue.isEmpty()) {
+                return;
+            }
             // Remove tudo que não for número
             String numeros = newValue.replaceAll("[^0-9]", "");
 
@@ -176,6 +236,9 @@ public class DocumentoUtil {
 
     public static void aplicarMascaraTelefone(TextField textField) {
         textField.textProperty().addListener((obs, oldValue, newValue) -> {
+            if (newValue == null || newValue.isEmpty()) {
+                return;
+            }
             // Remove tudo que não for número
             String numeros = newValue.replaceAll("[^0-9]", "");
 
@@ -218,6 +281,9 @@ public class DocumentoUtil {
     // Metodo para formatar CPF enquanto usuario digita
     public static void aplicarMascaraCep(TextField textField) {
         textField.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue == null || newValue.isEmpty()) {
+                return;
+            }
             String numeros = newValue.replaceAll("[^0-9]", "");
 
             if (numeros.length() > 8) {
@@ -237,12 +303,16 @@ public class DocumentoUtil {
         });
     }
 
+    // Metodo para formatar Data enquanto usuario digita
     public static void aplicarMarcaraData(DatePicker datePicker){
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
         TextField editor = datePicker.getEditor();
 
         editor.textProperty().addListener((obs, oldText, newText) -> {
+            if (newText == null || newText.isEmpty()) {
+                return;
+            }
             String numeros = newText.replaceAll("[^0-9]", "");
 
             if(numeros.length() > 8){
@@ -275,5 +345,13 @@ public class DocumentoUtil {
                 }
             });
         });
+    }
+
+    // Metodo para remover mascara
+    public static void removerMascara(TextField campo) {
+        String texto = campo.getText();
+        if (texto != null) {
+            campo.setText(texto.replaceAll("[^0-9]", ""));
+        }
     }
 }

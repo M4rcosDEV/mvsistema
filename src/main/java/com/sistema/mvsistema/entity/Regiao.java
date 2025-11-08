@@ -1,9 +1,6 @@
-package com.sistema.mvsistema.model;
+package com.sistema.mvsistema.entity;
 
 import jakarta.persistence.*;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
 @Table(name = "regiao")

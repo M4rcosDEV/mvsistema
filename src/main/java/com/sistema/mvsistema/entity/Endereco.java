@@ -1,11 +1,13 @@
-package com.sistema.mvsistema.model;
+package com.sistema.mvsistema.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
 @Table(name = "endereco")
-@Data
+@Getter
+@Setter
 public class Endereco {
 
     @Id
@@ -50,4 +52,26 @@ public class Endereco {
     @Column(name = "ibge_code", length = 10)
     private String ibgeCodigo;
 
+    @Column(nullable = false)
+    private Boolean ativo = true;
+
+    @Override
+    public String toString() {
+        return "Endereco{" +
+                "id=" + id +
+                ", cliente=" + cliente +
+                ", nome='" + nome + '\'' +
+                ", tipoEndereco='" + tipoEndereco + '\'' +
+                ", cep='" + cep + '\'' +
+                ", rua='" + rua + '\'' +
+                ", numero='" + numero + '\'' +
+                ", complemento='" + complemento + '\'' +
+                ", bairro='" + bairro + '\'' +
+                ", municipio=" + municipio +
+                ", estado='" + estado + '\'' +
+                ", pais='" + pais + '\'' +
+                ", ibgeCodigo='" + ibgeCodigo + '\'' +
+                ", ativo=" + ativo +
+                '}';
+    }
 }

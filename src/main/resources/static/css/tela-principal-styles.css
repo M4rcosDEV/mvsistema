@@ -80,3 +80,69 @@
     -fx-background-color: #f6f8fa;
 }
 
+.custom-notificacao {
+    -fx-font-family: "Segoe UI";
+    -fx-font-size: 13px;
+    -fx-background-color: #f9f9fb;
+    -fx-background-radius: 10;
+    -fx-padding: 12;
+    -fx-min-width: 320px;
+    -fx-max-width: 360px;
+}
+
+/* Título (se houver) */
+.custom-notificacao .header-panel {
+    -fx-background-color: transparent;
+    -fx-padding: 0 0 5 0;
+}
+
+/* Mensagem (texto principal) */
+.custom-notificacao .content.label {
+    -fx-text-fill: #333;
+    -fx-wrap-text: true;
+    -fx-font-size: 13px;
+}
+
+/* Campo de texto */
+.custom-notificacao .text-field {
+    -fx-background-color: white;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-border-color: #ccc;
+    -fx-border-width: 1;
+    -fx-padding: 5 8;
+    -fx-pref-width: 220px;
+}
+
+/* Campo de texto quando focado */
+.custom-notificacao .text-field:focused {
+    -fx-border-color: #4a90e2;
+    -fx-effect: dropshadow(three-pass-box, rgba(74,144,226,0.25), 5, 0, 0, 0);
+}
+
+/* Botões */
+.custom-notificacao .button {
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+    -fx-padding: 6 14;
+    -fx-font-size: 13px;
+}
+
+/* Botão principal (OK / Confirmar) */
+.custom-notificacao .button:default {
+    -fx-background-color: #4a90e2;
+    -fx-text-fill: white;
+}
+.custom-notificacao .button:default:hover {
+    -fx-background-color: #3a7bd5;
+}
+
+/* Botão secundário (Cancelar) */
+.custom-notificacao .button:cancel {
+    -fx-background-color: #e6e6e6;
+    -fx-text-fill: #333;
+}
+.custom-notificacao .button:cancel:hover {
+    -fx-background-color: #d4d4d4;
+}
+

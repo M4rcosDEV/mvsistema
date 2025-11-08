@@ -1,4 +1,4 @@
-package com.sistema.mvsistema.model;
+package com.sistema.mvsistema.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;

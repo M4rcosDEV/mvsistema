@@ -1,6 +1,6 @@
 package com.sistema.mvsistema.repository;
 
-import com.sistema.mvsistema.model.Usuario;
+import com.sistema.mvsistema.entity.Usuario;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import java.util.Optional;

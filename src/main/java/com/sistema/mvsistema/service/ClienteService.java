@@ -1,20 +1,22 @@
 package com.sistema.mvsistema.service;
 
 import com.sistema.mvsistema.dto.ClienteBusca;
-import com.sistema.mvsistema.model.Cliente;
 import com.sistema.mvsistema.repository.ClienteRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-
 @Service
 public class ClienteService {
 
     @Autowired
     private ClienteRepository clienteRepository;
+
+    @Autowired
+    public ClienteService(ClienteRepository clienteRepository) {
+        this.clienteRepository = clienteRepository;
+    }
 
     public Page<ClienteBusca> buscarClientes(String nome, String tipoPessoa, String cpfCnpj, Pageable pageable) {
 

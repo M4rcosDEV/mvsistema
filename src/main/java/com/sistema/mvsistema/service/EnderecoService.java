@@ -1,7 +1,6 @@
 package com.sistema.mvsistema.service;
 
-import com.sistema.mvsistema.model.Cliente;
-import com.sistema.mvsistema.model.Endereco;
+import com.sistema.mvsistema.entity.Endereco;
 import com.sistema.mvsistema.repository.EnderecoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 

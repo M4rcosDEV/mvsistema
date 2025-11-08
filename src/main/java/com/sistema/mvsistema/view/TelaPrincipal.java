@@ -2,7 +2,10 @@ package com.sistema.mvsistema.view;
 
 import atlantafx.base.theme.Styles;
 import com.sistema.mvsistema.service.SessaoUsuario;
+import com.sistema.mvsistema.util.ScreenUtils;
 import com.sistema.mvsistema.util.Versao;
+import com.sistema.mvsistema.view.cadastros.ClienteView;
+import com.sistema.mvsistema.view.cadastros.ProdutoView;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.event.ActionEvent;
@@ -31,166 +34,154 @@ public class TelaPrincipal {
     @Autowired
     private ClienteView clienteView;
 
+    @Autowired
+    private ProdutoView produtoView;
+
     private Pane telaCadastroCliente;
+    private Pane telaCadastroProduto;
+
+
+    private BorderPane layout;
 
     public Scene createScene(Runnable onSair) {
+        layout = new BorderPane();
 
-        //Fonte appNome
-        Font appNomeFonte = Font.loadFont(
-                getClass().getResourceAsStream("/static/fontes/Archive-Regular.otf"),
-                40 // tamanho da fonte
-        );
+        HBox cabecalho = configurarCabecalho(onSair);
+        MenuBar menu = configurarMenu();
 
-        BorderPane layout = new BorderPane();
+        //TOPO
 
-        Label appName = new Label("MV Sistema");
-        appName.setFont(appNomeFonte);
-        appName.getStyleClass().add("app-name");
+        // Agrupar cabecalho e menu no topo
+        VBox topoContainer = new VBox(cabecalho, menu);
+        layout.setTop(topoContainer);
 
-        Label usuarioAutenticado = new Label(SessaoUsuario.getUsuarioLogado().getNome().toUpperCase());
-        usuarioAutenticado.getStyleClass().add("label-user-autenticado");
-
-        // --- Label do relógio ---
-        Label clockLabel = new Label();
-        clockLabel.setStyle("");
-        clockLabel.getStyleClass().add("hora-tela-inicial");
-        // Formato da data/hora
-        DateTimeFormatter formato = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
-
-        // Timeline que atualiza o relógio a cada segundo
-        Timeline relogio = new Timeline(
-                new KeyFrame(Duration.seconds(1), e ->
-                        clockLabel.setText(LocalDateTime.now().format(formato))
-                )
-        );
-
-        relogio.setCycleCount(Timeline.INDEFINITE);
-        clockLabel.setText(LocalDateTime.now().format(formato));
-        relogio.play();
-
-        Region spacerHeader = new Region();
-
-        HBox.setHgrow(spacerHeader, Priority.ALWAYS);
-
-        Button btnSair = new Button (null, new FontIcon (Feather.LOG_OUT));
-        btnSair.getStyleClass().addAll(Styles.BUTTON_CIRCLE);
-        btnSair.setFocusTraversable(false);
-
-        HBox infoDireita = new HBox(15, usuarioAutenticado, new Separator(Orientation.VERTICAL) , clockLabel, new Separator(Orientation.VERTICAL), btnSair);
-        infoDireita.setAlignment(Pos.CENTER_RIGHT);
-
-        HBox header = new HBox(appName, spacerHeader, infoDireita);
-        header.getStyleClass().add("header-tela-principal");
-        header.setAlignment(Pos.CENTER_LEFT);
-
-        //MENU
-        Menu menuCadastro = new Menu("Cadastros");
-
-        MenuItem cadCliente = new MenuItem("Clientes");
-        MenuItem cadProduto = new MenuItem("Produtos");
-
-        menuCadastro.getItems().addAll(cadCliente, cadProduto);
-
-        Menu menuVendas = new Menu("Vendas");
-
-        MenuItem pdv = new MenuItem("PDV");
-        MenuItem historicoDeVendas = new MenuItem("Historico de vendas");
-
-        menuVendas.getItems().addAll(pdv, historicoDeVendas);
-
-        Menu menuFinanceiro = new Menu("Financeiro");
-        MenuItem contasReceber = new MenuItem("Contas a receber");
-        MenuItem contasPagar = new MenuItem("Contas a pagar");
-        menuFinanceiro.getItems().addAll(contasReceber, contasPagar);
-
-
-        Menu menuAjuda = new Menu("Ajuda");
-        MenuItem sobre = new MenuItem("Sobre");
-        menuAjuda.getItems().add(sobre);
-
-        btnSair.setOnAction(e -> {
-            SessaoUsuario.logout();
-            onSair.run();
-        });
-
-        MenuBar menuBar = new MenuBar(menuCadastro, menuVendas, menuFinanceiro, menuAjuda);
-
-        menuBar.getStyleClass().add("menu-bar");
-
-        // ---- Layout ----
-
-        //Topo
-        VBox topContainer = new VBox(header, menuBar);
-        layout.setTop(topContainer);
-
-        // Conteúdo central
-
-        // Define o StackPane que agora contém o VBox centralizado como o centro do BorderPane
-        layout.setCenter(conteudoPrincipal());
+        // Conteudo central
+        StackPane conteudoCentral = configurarConteudoPrincipal();
+        layout.setCenter(conteudoCentral);
 
         //Rodapé
-
-        Label LabelFooterVersao = new Label("VERSÃO DO SISTEMA "+Versao.getVersaoApp());
-        LabelFooterVersao.getStyleClass().add("versao-app");
-
-        Region spacerFooter = new Region();
-        HBox.setHgrow(spacerFooter, Priority.ALWAYS);
-
-        HBox footer = new HBox(LabelFooterVersao, spacerFooter);
-        footer.getStyleClass().add("footer-tela-principal");
-        layout.setBottom(footer);
-
-
-        //Eventos
-        cadCliente.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                if (telaCadastroCliente == null) {
-                    telaCadastroCliente = clienteView.createCadastroClientePane(layout); // cria apenas uma vez
-                }
-                layout.setCenter(telaCadastroCliente); // reutiliza a mesma instância
-            }
-        });
-
-/*
-        cadProduto.setOnAction(e -> {
-            if (telaCadastroProduto == null) {
-                ProdutoView produtoView = new ProdutoView();
-                telaCadastroProduto = produtoView.createAbaProduto();
-            }
-            layout.setCenter(telaCadastroProduto);
-        });
-*/
-
-
-        clienteView.setOnCloseRequest(() -> {
-            clienteView.limparEBloquearFormulario();
-            clienteView.limparFormEndereco();
-            layout.setCenter(conteudoPrincipal());
-        });
+        HBox rodape = configurarRodape();
+        layout.setBottom(rodape);
 
         StackPane sceneRoot = new StackPane();
         sceneRoot.getChildren().add(layout);
 
-        //Criação do scene
         Scene scene = new Scene(sceneRoot, 900, 600);
         scene.getStylesheets().add(
                 Objects.requireNonNull(getClass().getResource("/static/css/tela-principal-styles.css")).toExternalForm()
         );
         return scene;
-
     }
 
-    private Pane conteudoPrincipal(){
+    private HBox configurarCabecalho(Runnable onSair) {
+        // App Name
+        Font appNomeFonte = Font.loadFont(
+                getClass().getResourceAsStream("/static/fontes/Archive-Regular.otf"), 40
+        );
+
+        Label appName = new Label("MV Sistema");
+        appName.setFont(appNomeFonte);
+        appName.getStyleClass().add("app-name");
+
+        // Usuário e relógio
+        Label usuario = new Label(SessaoUsuario.getUsuarioLogado().getNome().toUpperCase());
+        usuario.getStyleClass().add("label-user-autenticado");
+
+        Label relogio = new Label();
+        relogio.getStyleClass().add("hora-tela-inicial");
+
+        // Configurar relógio
+        DateTimeFormatter formato = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
+        Timeline timeline = new Timeline(new KeyFrame(Duration.seconds(1), e ->
+                relogio.setText(LocalDateTime.now().format(formato))
+        ));
+        timeline.setCycleCount(Timeline.INDEFINITE);
+        relogio.setText(LocalDateTime.now().format(formato));
+        timeline.play();
+
+        // Botão Sair
+        Button btnSair = new Button(null, new FontIcon(Feather.LOG_OUT));
+        btnSair.getStyleClass().addAll("button-circle");
+        btnSair.setOnAction(e -> {
+            SessaoUsuario.logout();
+            onSair.run();
+        });
+
+        // Layout do header
+        HBox infoDireita = new HBox(15, usuario, new Separator(Orientation.VERTICAL), relogio, new Separator(Orientation.VERTICAL), btnSair);
+        infoDireita.setAlignment(Pos.CENTER_RIGHT);
+
+        Region espaco = new Region();
+        HBox.setHgrow(espaco, Priority.ALWAYS);
+
+        HBox header = new HBox(appName, espaco, infoDireita);
+        header.getStyleClass().add("header-tela-principal");
+        header.setAlignment(Pos.CENTER_LEFT);
+
+        return header;
+    }
+
+    private MenuBar configurarMenu(){
+        //CADASTROS
+        Menu menuCadastro = new Menu("Cadastros");
+        MenuItem cadCliente = new MenuItem("Clientes");
+        MenuItem cadProduto = new MenuItem("Produtos");
+        menuCadastro.getItems().addAll(cadCliente, cadProduto);
+
+        //VENDAS
+        Menu menuVendas = new Menu("Vendas");
+        MenuItem pdv = new MenuItem("PDV");
+        MenuItem historicoDeVendas = new MenuItem("Historico de vendas");
+        menuVendas.getItems().addAll(pdv, historicoDeVendas);
+
+        //FINANCEIRO
+        Menu menuFinanceiro = new Menu("Financeiro");
+        MenuItem contasReceber = new MenuItem("Contas a receber");
+        MenuItem contasPagar = new MenuItem("Contas a pagar");
+        menuFinanceiro.getItems().addAll(contasReceber, contasPagar);
+
+        //AJUDA
+        Menu menuAjuda = new Menu("Ajuda");
+        MenuItem sobre = new MenuItem("Sobre");
+        menuAjuda.getItems().add(sobre);
+
+        MenuBar menuBar = new MenuBar(menuCadastro, menuVendas, menuFinanceiro, menuAjuda);
+        menuBar.getStyleClass().add("menu-bar");
+
+        //EVENTOS DO MENU
+
+        //CADASTRO DE CLIENTE - ABRIR
+
+        cadCliente.setOnAction(e -> {
+            telaCadastroCliente = ScreenUtils.setTelaCentral(layout, telaCadastroCliente,
+                () -> clienteView.criarCadastroClientePane()
+            );
+        });
+
+        //CADASTRO DE CLIENTE - FECHAR
+        clienteView.setOnCloseRequest(() -> {
+            telaCadastroCliente = null;
+            layout.setCenter(configurarConteudoPrincipal());
+        });
+
+        //CADASTRO DE PRODUTOS - ABRIR
+
+        cadProduto.setOnAction(e -> {
+            telaCadastroProduto = ScreenUtils.setTelaCentral(layout, telaCadastroProduto,
+                    () -> produtoView.criarCadastroProdutoPane()
+            );
+        });
+
+        return menuBar;
+    }
+
+    private StackPane configurarConteudoPrincipal(){
 
         ImageView tituloMVSistema = new ImageView(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/static/imagens/tituloLogin.png"))));
-        tituloMVSistema.setPreserveRatio(false); // Estica a imagem para preencher
+        tituloMVSistema.setPreserveRatio(false);
 
 
-        Font fonteNomeUsuarioLabelPrincipal = Font.loadFont(
-                getClass().getResourceAsStream("/static/fontes/Archive-Regular.otf"),
-                40 // tamanho da fonte
-        );
+        Font fonteNomeUsuarioLabelPrincipal = Font.loadFont(getClass().getResourceAsStream("/static/fontes/Archive-Regular.otf"), 40);
 
         Label nomeUsuarioLabelPrincipal = new Label("Bem-vindo " + SessaoUsuario.getUsuarioLogado().getNome() + "!");
         nomeUsuarioLabelPrincipal.setFont(fonteNomeUsuarioLabelPrincipal);
@@ -198,36 +189,27 @@ public class TelaPrincipal {
         VBox.setMargin(nomeUsuarioLabelPrincipal, new Insets(-20, 0, 0, 30));
 
         VBox vBoxTelaInicial = new VBox(tituloMVSistema, nomeUsuarioLabelPrincipal);
-
-        // Centraliza o conteúdo (imagem e label) DENTRO do VBox
         vBoxTelaInicial.setAlignment(Pos.CENTER);
 
-        // Criei um StackPane para servir como container central
-        StackPane painelCentralWrapper = new StackPane();
-        painelCentralWrapper.getChildren().add(vBoxTelaInicial);
 
-        // Define o alinhamento do VBox DENTRO do StackPane embora CENTER seja o padrão
+        StackPane painelCentral= new StackPane();
+        painelCentral.getChildren().add(vBoxTelaInicial);
         StackPane.setAlignment(vBoxTelaInicial, Pos.CENTER);
 
-        return painelCentralWrapper;
+        return painelCentral;
     }
 
-    @SuppressWarnings("unused" )
-    private Pane createCadastroProdutoPane() {
-        Button btnNovoCliente = new Button(
-                "Novo cliente", new FontIcon (Feather.PLUS)
-        );
-        btnNovoCliente.getStyleClass().add(Styles.ACCENT);
-        btnNovoCliente.setMnemonicParsing(false);
-        btnNovoCliente.setFocusTraversable(false);
+    private HBox configurarRodape(){
+        Label LabelFooterVersao = new Label("VERSÃO DO SISTEMA "+Versao.getVersaoApp());
+        LabelFooterVersao.getStyleClass().add("versao-app");
 
-        // --- 6. LAYOUT PRINCIPAL ---
-        VBox layoutPrincipal = new VBox(15, btnNovoCliente);
+        Region spacerFooter = new Region();
+        HBox.setHgrow(spacerFooter, Priority.ALWAYS);
 
-        layoutPrincipal.getStyleClass().add("layout-principal-cad-cliente");
+        HBox rodape = new HBox(LabelFooterVersao, spacerFooter);
+        rodape.getStyleClass().add("footer-tela-principal");
 
-        layoutPrincipal.setPadding(new Insets(20));
-
-        return layoutPrincipal;
+        return rodape;
     }
+
 }

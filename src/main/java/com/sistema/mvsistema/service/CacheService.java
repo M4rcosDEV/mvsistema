@@ -1,7 +1,7 @@
 package com.sistema.mvsistema.service;
 
-import com.sistema.mvsistema.model.Estado;
-import com.sistema.mvsistema.model.Municipio;
+import com.sistema.mvsistema.entity.Estado;
+import com.sistema.mvsistema.entity.Municipio;
 import com.sistema.mvsistema.repository.EstadoRepository;
 import com.sistema.mvsistema.repository.MunicipioRepository;
 import jakarta.annotation.PostConstruct;

@@ -1,4 +1,4 @@
-package com.sistema.mvsistema.util;
+package com.sistema.mvsistema.view.components;
 
 import atlantafx.base.theme.Styles;
 import atlantafx.base.util.Animations;
@@ -12,17 +12,15 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Window;
 import javafx.util.Duration;
-import org.aspectj.weaver.ast.Not;
-import org.kordamp.ikonli.feather.Feather;
+import javafx.util.Pair;
 import org.kordamp.ikonli.javafx.FontIcon;
 import org.kordamp.ikonli.material2.Material2AL;
 import atlantafx.base.controls.Notification;
 
 import java.util.Optional;
-import java.util.function.Consumer;
 
 
-public class NotificationUtil {
+public class NotificacaoComponent {
     /**
      * Exibe uma notificação de erro "toast" não-bloqueante, aplica o estilo e foca o campo.
      * @param campo O componente que receberá o estilo
@@ -42,7 +40,7 @@ public class NotificationUtil {
         try {
             rootPane = (StackPane) campo.getScene().getRoot();
         } catch (Exception e) {
-            System.err.println("Erro Crítico de UI: O root da cena não é um StackPane.");
+            System.err.println("Erro Crítico de UI: O root da cena não é um StackPane. " + e.getMessage());
             return false;
         }
 
@@ -81,7 +79,6 @@ public class NotificationUtil {
         return false;
     }
 
-    // Versão simplificada (vermelho por padrão)
     public static boolean exibirNotificacao(Control campo, String mensagem) {
         return exibirNotificacao(campo, mensagem, Styles.DANGER);
     }
@@ -142,4 +139,57 @@ public class NotificationUtil {
         Optional<ButtonType> result = alert.showAndWait();
         return result.isPresent() && result.get() == yesBtn;
     }
+
+    public static boolean exibirNotificacaoConfirmacao(Window owner, String mensagem, String msgSim, String msgNao){
+        var alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Confirmação");
+        alert.setHeaderText(null);
+        alert.setContentText(mensagem);
+
+        DialogPane dialogPane = alert.getDialogPane();
+        dialogPane.getStyleClass().add("custom-alert");
+
+        ButtonType yesBtn = new ButtonType(msgSim, ButtonBar.ButtonData.YES);
+        ButtonType noBtn = new ButtonType(msgNao, ButtonBar.ButtonData.NO);
+
+        alert.getButtonTypes().setAll(yesBtn, noBtn);
+        alert.initOwner(owner.getScene().getWindow());
+
+        Optional<ButtonType> result = alert.showAndWait();
+        return result.isPresent() && result.get() == yesBtn;
+    }
+
+    public static Pair<Boolean, String> exibirNotificacaoInput(Window owner, String mensagem, String msgSim, String msgNao) {
+
+        TextInputDialog dialog = new TextInputDialog();
+        dialog.setTitle("Consultar CEP");
+        dialog.setHeaderText(null);
+        dialog.setContentText(mensagem);
+        dialog.initOwner(owner);
+
+
+        ButtonType btnSim = new ButtonType(msgSim, ButtonBar.ButtonData.OK_DONE);
+        ButtonType btnNao = new ButtonType(msgNao, ButtonBar.ButtonData.CANCEL_CLOSE);
+        dialog.getDialogPane().getButtonTypes().setAll(btnSim, btnNao);
+
+        dialog.getDialogPane().getStyleClass().add("custom-notificacao");
+
+        final ButtonType[] clickedButton = new ButtonType[1];
+
+        dialog.setResultConverter(button -> {
+            clickedButton[0] = button;
+            if (button == btnSim) {
+                return dialog.getEditor().getText();
+            }
+            return null;
+        });
+
+        Optional<String> result = dialog.showAndWait();
+
+        boolean confirmou = clickedButton[0] == btnSim;
+        String textoDigitado = result.orElse(null);
+
+        return new Pair<>(confirmou, textoDigitado);
+    }
+
 }

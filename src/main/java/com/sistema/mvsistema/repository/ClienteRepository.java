@@ -1,7 +1,7 @@
 package com.sistema.mvsistema.repository;
 
 import com.sistema.mvsistema.dto.ClienteBusca;
-import com.sistema.mvsistema.model.Cliente;
+import com.sistema.mvsistema.entity.Cliente;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

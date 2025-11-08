@@ -1,6 +1,6 @@
 package com.sistema.mvsistema.service;
 
-import com.sistema.mvsistema.model.Usuario;
+import com.sistema.mvsistema.entity.Usuario;
 
 public class SessaoUsuario {
     private static Usuario usuarioLogado = null;

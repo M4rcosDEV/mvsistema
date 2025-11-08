@@ -1,6 +1,5 @@
 package com.sistema.mvsistema.dto;
 
-import com.sistema.mvsistema.model.Municipio;
 import lombok.Data;
 
 

@@ -12,6 +12,7 @@ CREATE TABLE public.endereco (
     estado VARCHAR(2) NOT NULL,               -- Estado
     pais VARCHAR(20),                         -- País
     ibge_code VARCHAR(10),
+    ativo BOOLEAN DEFAULT TRUE,
     FOREIGN KEY (cliente_id)   REFERENCES cliente(id)   ON DELETE CASCADE,
     FOREIGN KEY (municipio_id) REFERENCES municipio(id) ON DELETE CASCADE
 );

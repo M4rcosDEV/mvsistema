@@ -19,6 +19,7 @@ public class ConstantesUtil {
     public static final String ESTADO_CIVIL_DIVORCIADO = "D";
     public static final String ESTADO_CIVIL_VIUVO = "V";
     public static final String ESTADO_CIVIL_UNIAO_ESTAVEL = "U";
+    public static final String ESTADO_CIVIL_NAO_INFORMAR = "N";
 
     public static final int VISUALIZACAO = 0;
     public static final int EDICAO = 1;
@@ -64,6 +65,7 @@ public class ConstantesUtil {
             case ESTADO_CIVIL_DIVORCIADO -> "Divorciado(a)";
             case ESTADO_CIVIL_VIUVO -> "Viúvo(a)";
             case ESTADO_CIVIL_UNIAO_ESTAVEL -> "União Estável";
+            case ESTADO_CIVIL_NAO_INFORMAR -> "Não informar";
             default -> "Selecione";
         };
     }
@@ -106,6 +108,7 @@ public class ConstantesUtil {
             case "Divorciado(a)" -> ESTADO_CIVIL_DIVORCIADO;
             case "Viúvo(a)" -> ESTADO_CIVIL_VIUVO;
             case "União Estável" -> ESTADO_CIVIL_UNIAO_ESTAVEL;
+            case "Não informar" -> ESTADO_CIVIL_NAO_INFORMAR;
             default -> null;
         };
     }

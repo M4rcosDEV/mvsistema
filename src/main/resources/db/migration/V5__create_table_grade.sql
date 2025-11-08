@@ -1,0 +1,5 @@
+CREATE TABLE public.grade (
+    id BIGSERIAL PRIMARY KEY,
+    nome VARCHAR(20) NOT NULL UNIQUE,
+    ativo BOOLEAN DEFAULT TRUE
+);

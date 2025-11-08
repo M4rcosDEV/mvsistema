@@ -2,11 +2,12 @@
 
     import atlantafx.base.controls.PasswordTextField;
     import atlantafx.base.theme.Styles;
-    import com.sistema.mvsistema.model.Usuario;
+    import com.sistema.mvsistema.entity.Usuario;
     import com.sistema.mvsistema.service.UsuarioService;
     import com.sistema.mvsistema.util.CriptografiaUtil;
     import com.sistema.mvsistema.util.Utils;
     import com.sistema.mvsistema.util.Versao;
+    import com.sistema.mvsistema.view.components.JanelaGeracaoVariacaoProduto;
     import javafx.geometry.Insets;
     import javafx.geometry.Pos;
     import javafx.scene.Cursor;
@@ -14,11 +15,9 @@
     import javafx.scene.control.*;
     import javafx.scene.image.Image;
     import javafx.scene.image.ImageView;
-    import javafx.scene.layout.BorderPane;
-    import javafx.scene.layout.HBox;
-    import javafx.scene.layout.StackPane;
-    import javafx.scene.layout.VBox;
+    import javafx.scene.layout.*;
     import javafx.scene.text.Text;
+    import javafx.stage.Stage;
     import org.kordamp.ikonli.feather.Feather;
     import org.kordamp.ikonli.javafx.FontIcon;
     import org.kordamp.ikonli.material2.Material2AL;
@@ -34,7 +33,10 @@
         @Autowired
         private UsuarioService usuarioService;
 
-        public Scene createScene(Runnable onLoginSuccess) {
+        @Autowired
+        private JanelaGeracaoVariacaoProduto janelaGeracaoVariacaoProduto;
+
+        public Scene createScene(Runnable onLoginSuccess, Stage stage) {
 
             ImageView logoImageView = new ImageView();
             try {
@@ -87,6 +89,16 @@
             );
             btnLoginSuccess.setContentDisplay(ContentDisplay.RIGHT);
 
+            Button dev = new Button("Dev");
+
+            dev.setOnAction(e ->{
+                //Usuario usuario1 = new Usuario("marcos", CriptografiaUtil.gerarHash("1234"), "ADMIN", LocalDateTime.now(), true );
+                //System.out.println(usuario1);
+                //usuarioService.salvar(usuario1);
+                //GeradorVariacoesView geradorVariacoesView= new GeradorVariacoesView();
+                janelaGeracaoVariacaoProduto.mostrarJanela();
+            });
+
             Button btnLeave = new Button("Sair");
 
             btnLeave.getStyleClass().addAll(
@@ -97,7 +109,10 @@
             btnLoginSuccess.setDefaultButton(true);
 
             btnLeave.setPrefWidth(100);
-            HBox btnLogin = new HBox(5, btnLeave, btnLoginSuccess);
+
+            Region spacerFooter = new Region();
+            HBox.setHgrow(spacerFooter, Priority.ALWAYS);
+            HBox btnLogin = new HBox(5,dev, spacerFooter, btnLeave, btnLoginSuccess);
             btnLogin.setAlignment(Pos.CENTER_RIGHT);
 
             usuario.setText("marcos");
@@ -105,9 +120,7 @@
 
 
             btnLeave.setOnAction(e -> {
-                Usuario usuario1 = new Usuario("marcos", CriptografiaUtil.gerarHash("1234"), "ADMIN", LocalDateTime.now(), true );
-                System.out.println(usuario1);
-                usuarioService.salvar(usuario1);
+                stage.close();
             });
 
             Label versao = new Label("VERSÃO: " + Versao.getVersaoApp());

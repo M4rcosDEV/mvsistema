@@ -1,6 +1,6 @@
 package com.sistema.mvsistema.service;
 
-import com.sistema.mvsistema.model.Usuario;
+import com.sistema.mvsistema.entity.Usuario;
 import com.sistema.mvsistema.repository.UsuarioRepository;
 import com.sistema.mvsistema.util.CriptografiaUtil;
 import org.springframework.beans.factory.annotation.Autowired;
